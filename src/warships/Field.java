@@ -1,16 +1,21 @@
 package warships;
 
+import java.util.ArrayList;
+
 public class Field {
 
     private int width = 10;
     private int height = 10;
     private int power = 4;
+    private static String fieldOwner;
+    public ArrayList<Coord> listOfShips = new ArrayList<>();
 
     private int[][] matrix;
 
 
-    protected Field() {
+    protected Field(String name) {
         matrix = new int[height][width];
+        fieldOwner = name;
 
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
@@ -18,10 +23,11 @@ public class Field {
             }
         }
 
-        putShip(1, 1);
-        putShip(4,4);
-        putShip(4,9);
-        putShip(9,9);
+        putShip(new Coord(1 , 1));
+        putShip(new Coord(4 , 4));
+        putShip(new Coord(9 , 9));
+        putShip(new Coord(4 , 9));
+
 
     }
 
@@ -29,15 +35,15 @@ public class Field {
         return power;
     }
 
-    private Integer getValue(int x, int y) {
-        if (x >= 0 && x < width && y >= 0 && y < height)
-            return matrix[y][x];
+    private Integer getValue(Coord coord) {
+        if (coord.x >= 0 && coord.x < width && coord.y >= 0 && coord.y < height)
+            return matrix[coord.x][coord.y];
         return null;
     }
 
-    private void setValue(int x, int y, int value) {
-        if (x >= 0 && x < width && y >= 0 && y < height)
-            matrix[y][x] = value;
+    private void setValue(Coord coord, int value) {
+        if (coord.x >= 0 && coord.x < width && coord.y >= 0 && coord.y < height)
+            matrix[coord.x][coord.y] = value;
     }
 
     protected void print() {
@@ -53,14 +59,15 @@ public class Field {
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
                 int index = rezerv[i][j];
+                // 0 - пустя клетка
                 if (index == 0)
                     System.out.print(" 0 ");
-                else if (index == 1)
+                // 1 - попадание в корабль
+                else if (index == 5)
                     System.out.print(" X ");
+                // -1 - промах
                 else if (index == -1)
                     System.out.print(" - ");
-                else if (index == 5)
-                    System.out.print(" + ");
                 else
                     System.out.print("?");
             }
@@ -68,22 +75,25 @@ public class Field {
         }
     }
 
-    private void putShip(int x, int y){
-        int value = getValue(x, y);
-        if (value == 0 )
-            setValue(x, y, 1);
+    private void putShip(Coord coord){
+        int value = getValue(coord);
+        if (value == 0 ) {
+            listOfShips.add(coord);
+        }
         else
-            System.out.println("try another one");
+            System.out.println("try another one cell");
     }
 
-    protected void shoot(int x, int y){
-        int value = getValue(x, y);
-        if (value == 1) {
-            setValue(x, y, 5);
+    protected void shoot(Coord coord){
+
+        int value = getValue(coord);
+        if (listOfShips.removeIf(coord1 -> coord1.equals(coord))){
+            setValue(coord, 5);
             power--;
         }
-        else if (value == 0)
-            setValue(x, y, -1);
-
+        else {
+            if (value == 0)
+                setValue(coord, -1);
+        }
     }
 }
