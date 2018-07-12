@@ -1,21 +1,23 @@
-package warships;
+package warships.server;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Field {
+public class Field implements Serializable{
 
     private int width = 10;
     private int height = 10;
-    private int power = 4;
-    private static String fieldOwner;
+    private int power;
+    private String fieldOwner;
     public ArrayList<Coord> listOfShips = new ArrayList<>();
 
     private int[][] matrix;
 
 
     protected Field(String name) {
-        matrix = new int[height][width];
         fieldOwner = name;
+
+        matrix = new int[width][height];
 
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
@@ -25,14 +27,18 @@ public class Field {
 
         putShip(new Coord(1 , 1));
         putShip(new Coord(4 , 4));
-        putShip(new Coord(9 , 9));
-        putShip(new Coord(4 , 9));
+        putShip(new Coord(1 , 0));
+        putShip(new Coord(0 , 8));
 
 
     }
 
-    protected int getPower() {
+    public int getPower() {
         return power;
+    }
+
+    public void setPower() {
+        this.power = listOfShips.size();
     }
 
     private Integer getValue(Coord coord) {
@@ -43,19 +49,34 @@ public class Field {
 
     private void setValue(Coord coord, int value) {
         if (coord.x >= 0 && coord.x < width && coord.y >= 0 && coord.y < height)
-            matrix[coord.x][coord.y] = value;
+            matrix[coord.y][coord.x] = value;
+    }
+    public String getFieldOwner() {
+        return fieldOwner;
     }
 
-    protected void print() {
+    protected void print(String str) {
 
         int[][] rezerv = new int[height][width];
-
 
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
                 rezerv[i][j] = matrix[i][j];
             }
         }
+        if(str == "ali"){
+            for(Coord coord : listOfShips){
+                rezerv[coord.y][coord.x] = 1;
+            }
+        }
+        /*
+        //Состояние клеток:
+        // "0" - неоткрытая пустая клетка
+        // "-1" - открытая пустая клетка
+        // "1" - открытая клетка с целым кораблем (для Alli поля)
+        // "5" - открытая клетка с раненым кораблем
+         */
+
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
                 int index = rezerv[i][j];
@@ -68,6 +89,8 @@ public class Field {
                 // -1 - промах
                 else if (index == -1)
                     System.out.print(" - ");
+                else if (index == 1)
+                    System.out.print(" S ");
                 else
                     System.out.print("?");
             }
@@ -75,10 +98,11 @@ public class Field {
         }
     }
 
-    private void putShip(Coord coord){
+    protected void putShip(Coord coord){
         int value = getValue(coord);
         if (value == 0 ) {
             listOfShips.add(coord);
+            power++;
         }
         else
             System.out.println("try another one cell");

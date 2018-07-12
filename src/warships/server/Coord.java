@@ -1,4 +1,4 @@
-package warships;
+package warships.server;
 
 public class Coord {
     public int x;
