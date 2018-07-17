@@ -1,4 +1,4 @@
-package warships.server;
+package src.warships.server;
 
 public enum Commands {
 

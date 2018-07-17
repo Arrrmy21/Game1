@@ -1,4 +1,4 @@
-package warships.server;
+package src.warships.server;
 
 import java.io.Serializable;
 import java.util.ArrayList;

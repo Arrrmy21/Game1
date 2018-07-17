@@ -1,6 +1,7 @@
-package warships.client;
+package src.warships.client;
 
-import warships.server.Field;
+
+import src.warships.server.Field;
 
 import java.io.*;
 import java.net.Socket;
@@ -26,7 +27,9 @@ public class Player {
         connect();
         setUpNetwork();
 
-        speaking();
+        //speaking();
+        new Thread(new PlayerListener()).start();
+        new Thread(new PlayerWriter()).start();
     }
 
 
@@ -63,13 +66,84 @@ public class Player {
             ex.printStackTrace();
         }
     }
+    private class PlayerListener implements Runnable {
 
-    public void speaking() {
+        @Override
+        public void run() {
+            System.out.println("Starting listening...");
+            while (true) {
+                String receivedMessage = "";
+                try {
+                    receivedMessage = reader.readLine();
+                    if (!receivedMessage.isEmpty()) {
+                        System.out.println(receivedMessage);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private class PlayerWriter implements Runnable {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        String msgEntered = keyboard.readLine();
+
+                        if (!msgEntered.isEmpty()) {
+                            String firstWord = "";
+                            String secondWord = "";
+                            String msgEdited = msgEntered.replaceAll("\\s", "");
+
+                            if (msgEdited.equalsIgnoreCase("exit")) {
+                                closeConnection();
+                                break;
+                            }
+                            /*
+                            // Символ "=" означает присваивание имени
+                             */
+                            if (msgEdited.contains("=")) {
+                                firstWord = (msgEdited.split("=")[0]);
+                                secondWord = (msgEdited.split("=")[1]);
+                                System.out.println("first word = " + firstWord);
+                                System.out.println("second word = " + secondWord);
+                                if (firstWord.equalsIgnoreCase("name")) {
+                                    setNameOfPlayer(secondWord);
+                                }
+                                /*
+                                //Если игрок не присваивает себе имя - идёт проверка на наличие имени
+                                 */
+                            } else if (getNameOfPlayer() == null) {
+                                System.out.println("Enter your name first by [name = <your name>]");
+                            } else {
+                                System.out.println("name of player = " + getNameOfPlayer());
+                                String msgToServer = getNameOfPlayer() + ":" + msgEdited;
+                                System.out.println("Msg to server: " + msgToServer);
+                                if (msgToServer != null) {
+                                    writer.println(msgToServer);
+                                    writer.flush();
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        System.out.println("Ошибка ввода");
+                    }
+                }
+            }
+        }
+
+
+    /*public void speaking() {
+        while (true) {
             try {
                 String msgEntered = "";
                 String msgFromServer = "";
                 msgEntered = keyboard.readLine();
-                while (msgEntered!= null) {
+
+                if (!msgEntered.isEmpty()) {
                     String firstWord = "";
                     String secondWord = "";
                     String msgEdited = msgEntered.replaceAll("\\s", "");
@@ -86,29 +160,29 @@ public class Player {
                         if (firstWord.equalsIgnoreCase("name")) {
                             setNameOfPlayer(secondWord);
                         }
-                    }
-                    else if (getNameOfPlayer() == null) {
+                    } else if (getNameOfPlayer() == null) {
                         System.out.println("Enter your name first by [name = <your name>]");
-                    }
-                    else {
+                    } else {
                         System.out.println("name of player = " + getNameOfPlayer());
                         String msgToServer = getNameOfPlayer() + ":" + msgEdited;
                         System.out.println("Msg to server: " + msgToServer);
                         if (msgToServer != null) {
                             writer.println(msgToServer);
                             writer.flush();
-                            while ((msgFromServer=reader.readLine())!=null) {
+                            while ((msgFromServer = reader.readLine()) != null) {
                                 if (msgFromServer.equalsIgnoreCase("endMessage")) break;
                                 System.out.println("Scan reply from server: " + msgFromServer);
                             }
                         }
                     }
+                    msgEntered = "";
                 }
             } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println("Ошибка ввода");
             }
         }
+    }*/
 
     public void closeConnection() {
         try {

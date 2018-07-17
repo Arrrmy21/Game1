@@ -1,4 +1,4 @@
-package warships.server;
+package src.warships.server;
 
 
 import java.io.*;
@@ -13,9 +13,9 @@ public class Warships {
 
     ServerSocket serverSocket;
     private int playerID = 0;
-    ArrayList<ClientHandler> clients = new ArrayList<>();
+    static ArrayList<ClientHandler> clients = new ArrayList<>();
 
-    private HashMap<String, Integer> playerData = new HashMap<>();
+    private static HashMap<String, Integer> playerData = new HashMap<>();
     private static HashMap<Game, ArrayList> gameData = new HashMap<>();
 
 
@@ -89,9 +89,11 @@ public class Warships {
                     Commands command = null;
                     Coord coord = null;
                     String msgFromClient = "";
-                    while ((msgFromClient = reader.readLine()) != null) {
+
+                    while (!(msgFromClient = reader.readLine()).isEmpty()) {
                         //Parse
                         String[] getMsg = msgFromClient.split(":");
+                        System.out.println(".....Server got message......" );
                         System.out.println("getMsg length = " + getMsg.length);
                         if (getMsg.length==2){
                             nameOfPlayer = getMsg[0];
@@ -106,10 +108,10 @@ public class Warships {
                             writeMsgToClient("Wrong command", pID);
                             break;
                         }
-                        String cccc = "Enered command : " + command;
-                        writeMsgToClient(cccc, pID);
+                        String enteredCommand = "Enered command : " + command;
+                        writeMsgToClient(enteredCommand, pID);
 
-                        System.out.println("msg from client: " + msgFromClient);
+                        System.out.println("MMMsg from client: " + msgFromClient);
                         //Обработка сообщения от клиента
                         try{
                             if(authorize(nameOfPlayer, pID)==true) {
@@ -156,9 +158,7 @@ public class Warships {
                                             writeMsgToClient("waiting for an opponent", pID);
                                             break;
                                     }
-
                                 }
-
                             }
                             else{
                                 writeMsgToClient("Enter new name", pID);
@@ -170,6 +170,7 @@ public class Warships {
                             e.printStackTrace();
                             System.out.println("Error 1");
                         }
+
                     }
                 }
             } catch (Exception e) {
@@ -179,7 +180,7 @@ public class Warships {
         }
     }
 
-    //Существует ли имя в базе игроков.
+//    Существует ли имя в базе игроков.
     public synchronized boolean authorize(String nameOP, int id){
         boolean auth = false;
         //Если нет - заносим в базу.
@@ -205,7 +206,7 @@ public class Warships {
 
     }
 
-    //Проверяем если ли игрок с таким именем в какой-то игре и активна ли игра.
+//    Проверяем если ли игрок с таким именем в какой-то игре и активна ли игра.
     public synchronized boolean checkGameStatus(String nameOP){
         boolean isGameAvailable = false;
         for (Game gameKeys : gameData.keySet()){
@@ -260,7 +261,7 @@ public class Warships {
             intCoords[i] = Integer.parseInt(strCoords[i]);
         return new Coord(intCoords[0], intCoords[1]);
     }
-    //Проверка наличия имени в базе
+//    Проверка наличия имени в базе
     public synchronized boolean checkStatusOfPlayerName(String nameOP) {
         boolean isNameExist = false;
             for (String name : playerData.keySet()) {
@@ -273,12 +274,12 @@ public class Warships {
         return isNameExist;
     }
 
-    public synchronized void writeMsgToClient(String message, int id){
+    public static synchronized void writeMsgToClient(String message, int id){
         try {
             for (ClientHandler client : clients){
                 if (id==client.pID){
                     client.writer.println(message);
-                    //client.out.flush();
+//                    client.out.flush();
                     System.out.println("Message [" + message + "] sent to client.");
                     break;
                 }
@@ -304,7 +305,7 @@ public class Warships {
         @Override
         public void run() {
             while (true){
-                if (queueOfPlayers.size()==2){
+                if (queueOfPlayers.size()>1){
                     String fistInQueue = queueOfPlayers.poll();
                     String secondInQueue = queueOfPlayers.poll();
 
@@ -314,6 +315,11 @@ public class Warships {
                     Game game = new Game(fistInQueue, secondInQueue);
                     System.out.println("New game with players " + fistInQueue + " and " + secondInQueue + " created");
                     gameData.put(game, players);
+                    writeMsgToClient("Your game with player " + secondInQueue + " is ready", playerData.get(fistInQueue));
+//                    writeMsgToClient("endMessage", playerData.get(fistInQueue));
+                    writeMsgToClient("Your game with player " + fistInQueue + " is ready", playerData.get(secondInQueue));
+//                    writeMsgToClient("endMessage", playerData.get(secondInQueue));
+
 
                     try {
                         Thread.sleep(100);
