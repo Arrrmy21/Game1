@@ -1,10 +1,12 @@
-package src.warships.server;
+package warships.server;
 
 
-public class Game{
+import java.io.Serializable;
 
-    private Field firstField;
-    private Field secondField;
+public class Game implements Serializable {
+
+    public Field firstField;
+    public Field secondField;
 
     private boolean endOfGame;
 
@@ -16,6 +18,9 @@ public class Game{
     private boolean turnOfFirstPlayerToMove = true;
     private boolean turnOfSecondPlayerToMove = false;
 
+    /*
+    //Создание игры для 2-х игроков
+     */
     public Game(String firstPlayerName, String secondPlayerName) {
         nameOfFirstPlayer = firstPlayerName;
         nameOfSecondPlayer = secondPlayerName;
@@ -27,6 +32,9 @@ public class Game{
         secondField = new Field(nameOfSecondPlayer);
         endOfGame = false;
     }
+    /*
+    //Создание игры для одного игрока
+     */
     public Game(String firstPlayerName) {
         nameOfFirstPlayer = firstPlayerName;
         nameOfSecondPlayer = "BOT";
@@ -41,6 +49,9 @@ public class Game{
     public boolean isEndOfGame() {
         return endOfGame;
     }
+    /*
+    //Смена хода
+     */
     private void changeOfTurn(){
         if (turnOfFirstPlayerToMove == false && turnOfSecondPlayerToMove == true) {
             turnOfFirstPlayerToMove = true;
@@ -101,7 +112,7 @@ public class Game{
         }
         else if (secondField.getPower() == 0){
             endOfGame = true;
-        };
+        }
     }
     public boolean turnToMove(String name){
         if (nameOfFirstPlayer==name && turnOfFirstPlayerToMove == true){
@@ -114,4 +125,6 @@ public class Game{
             return false;
         }
     }
+
+
 }

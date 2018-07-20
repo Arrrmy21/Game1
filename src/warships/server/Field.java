@@ -1,4 +1,4 @@
-package src.warships.server;
+package warships.server;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -13,7 +13,9 @@ public class Field implements Serializable{
 
     private int[][] matrix;
 
-
+    /*
+    //Для создания игрового поля используется имя игрока
+     */
     protected Field(String name) {
         fieldOwner = name;
 
@@ -51,11 +53,12 @@ public class Field implements Serializable{
         if (coord.x >= 0 && coord.x < width && coord.y >= 0 && coord.y < height)
             matrix[coord.y][coord.x] = value;
     }
+
     public String getFieldOwner() {
         return fieldOwner;
     }
 
-    protected void print(String str) {
+    public void print(String name) {
 
         int[][] rezerv = new int[height][width];
 
@@ -64,14 +67,14 @@ public class Field implements Serializable{
                 rezerv[i][j] = matrix[i][j];
             }
         }
-        if(str == "ali"){
+        if(name == fieldOwner){
             for(Coord coord : listOfShips){
                 rezerv[coord.y][coord.x] = 1;
             }
         }
         /*
         //Состояние клеток:
-        // "0" - неоткрытая пустая клетка
+        // "0" - закрытая пустая клетка
         // "-1" - открытая пустая клетка
         // "1" - открытая клетка с целым кораблем (для Alli поля)
         // "5" - открытая клетка с раненым кораблем

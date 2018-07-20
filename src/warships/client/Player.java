@@ -1,7 +1,8 @@
-package src.warships.client;
+package warships.client;
 
 
-import src.warships.server.Field;
+import warships.server.Field;
+import warships.server.Game;
 
 import java.io.*;
 import java.net.Socket;
@@ -10,11 +11,13 @@ public class Player {
 
     private String nameOfPlayer;
 
-    ObjectInputStream fileInputStream;
     BufferedReader reader;
     BufferedReader keyboard;
     PrintWriter writer;
+    ObjectInputStream ois;
+
     Socket sock;
+    //Game currentGame;
 
     private Field playerField;
     private Field enemyField;
@@ -30,15 +33,7 @@ public class Player {
         //speaking();
         new Thread(new PlayerListener()).start();
         new Thread(new PlayerWriter()).start();
-    }
-
-
-    public String getNameOfPlayer() {
-        return nameOfPlayer;
-    }
-
-    public void setNameOfPlayer(String name) {
-        this.nameOfPlayer = name;
+        new Thread(new StartGettingFiles()).start();
     }
 
     private void connect(){
@@ -55,30 +50,34 @@ public class Player {
 
         try {
             keyboard = new BufferedReader(new InputStreamReader(System.in));
-            reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
-            //System.out.println("Reader created");
-            writer = new PrintWriter( new OutputStreamWriter(sock.getOutputStream()));
-            //System.out.println("Writer created");
 
-            System.out.println("connections created.");
+            System.out.println("Connection with keyboard created.");
         } catch (Exception ex) {
-            System.out.println("Reader / Writer creation failed.");
             ex.printStackTrace();
         }
     }
+
     private class PlayerListener implements Runnable {
 
         @Override
         public void run() {
-            System.out.println("Starting listening...");
+            try {
+                System.out.println("Reader loading...");
+                reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+                System.out.println("Reader created");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
             while (true) {
                 String receivedMessage = "";
                 try {
                     receivedMessage = reader.readLine();
-                    if (!receivedMessage.isEmpty()) {
+                    if (receivedMessage != null) {
                         System.out.println(receivedMessage);
                     }
                 } catch (IOException e) {
+                    closeConnection();
                     e.printStackTrace();
                 }
             }
@@ -88,6 +87,13 @@ public class Player {
     private class PlayerWriter implements Runnable {
             @Override
             public void run() {
+                try {
+                    System.out.println("Writer loading...");
+                    writer = new PrintWriter( new OutputStreamWriter(sock.getOutputStream()));
+                    System.out.println("Writer created");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 while (true) {
                     try {
                         String msgEntered = keyboard.readLine();
@@ -135,54 +141,45 @@ public class Player {
             }
         }
 
+    private class StartGettingFiles implements Runnable {
 
-    /*public void speaking() {
-        while (true) {
+        @Override
+        public void run() {
+
             try {
-                String msgEntered = "";
-                String msgFromServer = "";
-                msgEntered = keyboard.readLine();
-
-                if (!msgEntered.isEmpty()) {
-                    String firstWord = "";
-                    String secondWord = "";
-                    String msgEdited = msgEntered.replaceAll("\\s", "");
-
-                    if (msgEdited.equalsIgnoreCase("exit")) {
-                        closeConnection();
-                        break;
-                    }
-                    if (msgEdited.contains("=")) {
-                        firstWord = (msgEdited.split("=")[0]);
-                        secondWord = (msgEdited.split("=")[1]);
-                        System.out.println("first word = " + firstWord);
-                        System.out.println("second word = " + secondWord);
-                        if (firstWord.equalsIgnoreCase("name")) {
-                            setNameOfPlayer(secondWord);
-                        }
-                    } else if (getNameOfPlayer() == null) {
-                        System.out.println("Enter your name first by [name = <your name>]");
-                    } else {
-                        System.out.println("name of player = " + getNameOfPlayer());
-                        String msgToServer = getNameOfPlayer() + ":" + msgEdited;
-                        System.out.println("Msg to server: " + msgToServer);
-                        if (msgToServer != null) {
-                            writer.println(msgToServer);
-                            writer.flush();
-                            while ((msgFromServer = reader.readLine()) != null) {
-                                if (msgFromServer.equalsIgnoreCase("endMessage")) break;
-                                System.out.println("Scan reply from server: " + msgFromServer);
-                            }
-                        }
-                    }
-                    msgEntered = "";
-                }
-            } catch (Exception e) {
+                System.out.println("Going to create object input stream");
+                ois = new ObjectInputStream(sock.getInputStream());
+                System.out.println("done");
+            } catch (IOException e) {
                 e.printStackTrace();
-                System.out.println("Ошибка ввода");
+            }
+            while (true) {
+                try {
+                            System.out.println("------going to get file");
+                            Game currentGame = (Game) ois.readObject();
+                            playerField = currentGame.firstField;
+                            //enemyField = currentGame.secondField;
+                        System.out.println("*/*/*/*/*/Field1 owner: "+ playerField.getFieldOwner());
+                            System.out.println("------Game file received");
+
+                        // currentGame.firstField.print(nameOfPlayer);
+
+                    } catch(IOException e){
+                    e.printStackTrace();
+                    } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+
             }
         }
-    }*/
+    }
+    public String getNameOfPlayer() {
+        return nameOfPlayer;
+    }
+
+    public void setNameOfPlayer(String name) {
+        this.nameOfPlayer = name;
+    }
 
     public void closeConnection() {
         try {
@@ -201,13 +198,6 @@ public class Player {
         }
     }
 
-    public void startGettigFiels(){
-        try {
-            fileInputStream = new ObjectInputStream(sock.getInputStream());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
 
 }
