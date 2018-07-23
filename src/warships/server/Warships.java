@@ -156,8 +156,9 @@ public class Warships {
         try {
             for (ClientHandler client : clients){
                 if (id==client.pID){
-                    client.writer.println(message);
-//                    client.out.flush();
+//                    client.writer.println(message);
+                    client.oos.writeObject(message);
+//                    client.oos.flush();
                     System.out.println("Message [" + message + "] sent to client.");
                     break;
                 }
@@ -194,7 +195,7 @@ public class Warships {
             try {
                 reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
                 System.out.println("Input stream created");
-                writer = new PrintWriter(sock.getOutputStream());
+//                writer = new PrintWriter(sock.getOutputStream());
                 System.out.println("Output stream created");
 
                 oos = new ObjectOutputStream(sock.getOutputStream());
@@ -277,14 +278,14 @@ public class Warships {
                                             gameData.put(currentGame, playerList);
                                             System.out.println("New game was created");
                                             writeMsgToClient("New game was created", pID);
+                                            oos.writeObject(currentGame);
 
-                                            new Thread(new GameSender(sock, nameOfPlayer, pID)).start();
+                                            //new Thread(new GameSender(sock, nameOfPlayer, pID)).start();
 
                                             break;
                                         case START:
                                             QueueOfPlayersHandler.queueOfPlayers.offer(nameOfPlayer);
                                             writeMsgToClient("Waiting for an opponent", pID);
-
                                             break;
                                     }
                                 }
@@ -294,7 +295,7 @@ public class Warships {
                                 writeMsgToClient("Enter new name", pID);
                             }
                             //writeMsgToClient("endMessage", pID);
-                            writer.flush();
+                            oos.flush();
                         } catch (Exception e) {
                             e.printStackTrace();
                             System.out.println("Error 1");

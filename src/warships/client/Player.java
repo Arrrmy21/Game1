@@ -17,7 +17,7 @@ public class Player {
     ObjectInputStream ois;
 
     Socket sock;
-    //Game currentGame;
+    Game currentGame;
 
     private Field playerField;
     private Field enemyField;
@@ -33,7 +33,7 @@ public class Player {
         //speaking();
         new Thread(new PlayerListener()).start();
         new Thread(new PlayerWriter()).start();
-        new Thread(new StartGettingFiles()).start();
+//        new Thread(new StartGettingFiles()).start();
     }
 
     private void connect(){
@@ -59,11 +59,13 @@ public class Player {
 
     private class PlayerListener implements Runnable {
 
+        int k = 0;
         @Override
         public void run() {
             try {
                 System.out.println("Reader loading...");
-                reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+//                reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+                ois = new ObjectInputStream(sock.getInputStream());
                 System.out.println("Reader created");
             } catch (IOException e) {
                 e.printStackTrace();
@@ -72,12 +74,25 @@ public class Player {
             while (true) {
                 String receivedMessage = "";
                 try {
-                    receivedMessage = reader.readLine();
-                    if (receivedMessage != null) {
-                        System.out.println(receivedMessage);
+                    if (ois.readObject() != null) {
+                        Object obj = ois.readObject();
+                        if (obj instanceof String) {
+                            System.out.println("K = " + k);
+                            k++;
+                            receivedMessage = String.valueOf(ois.readObject());
+                            System.out.println("Received message: " + receivedMessage);
+                        } else if (obj instanceof Game) {
+                            currentGame = (Game) ois.readObject();
+//                        playerField = currentGame.firstField;
+//                        System.out.println("PLAYER FILES OWNER: " + playerField.getFieldOwner() );
+                            System.out.println("PLAYER FILES OWNER: ");
+                        } else {
+                            System.out.println("no files ");
+                        }
                     }
                 } catch (IOException e) {
-                    closeConnection();
+                    e.printStackTrace();
+                } catch (ClassNotFoundException e) {
                     e.printStackTrace();
                 }
             }
