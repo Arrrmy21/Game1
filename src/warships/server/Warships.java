@@ -59,30 +59,7 @@ public class Warships {
     }
 
 //    Существует ли имя в базе игроков.
-    public synchronized boolean authorize(String nameOP, int id){
-        boolean auth = false;
-        //Если нет - заносим в базу.
-        if(checkStatusOfPlayerName(nameOP)==false){
-            playerData.put(nameOP, id);
-            System.out.println("Name [" + nameOP + "] added to data.");
-            writeMsgToClient("Your name added to data.", id);
-            auth = true;
-        }
-        //Если имя существует - проверяем совпадение id
-        else {
-            System.out.println("playerData.get(nameOfPlayer)= " + playerData.get(nameOP));
-            System.out.println("pID = " + id);
-            if(playerData.get(nameOP)==id) {
-                auth = true;
-            }
-            else {
-                writeMsgToClient("Name [" + nameOP + "] is already exist. Enter another name.", id);
-                System.out.println("Name [" + nameOP + "] is already exist.");
-            }
-        }
-        return auth;
 
-    }
 
 //    Проверяем если ли игрок с таким именем в какой-то игре и активна ли игра.
     public synchronized boolean checkGameStatus(String nameOP){
@@ -152,13 +129,13 @@ public class Warships {
         return isNameExist;
     }
 
-    public static synchronized void writeMsgToClient(String message, int id){
+    public void writeMsgToClient(String message, int id){
         try {
             for (ClientHandler client : clients){
                 if (id==client.pID){
 //                    client.writer.println(message);
                     client.oos.writeObject(message);
-//                    client.oos.flush();
+                    client.oos.flush();
                     System.out.println("Message [" + message + "] sent to client.");
                     break;
                 }
@@ -168,6 +145,31 @@ public class Warships {
             ex.printStackTrace();
             System.out.println("Sending error");
         }
+    }
+
+    public synchronized boolean authorize(String nameOP, int id){
+        boolean auth = false;
+        //Если нет - заносим в базу.
+        if(checkStatusOfPlayerName(nameOP)==false){
+            playerData.put(nameOP, id);
+            System.out.println("Name [" + nameOP + "] added to data.");
+            writeMsgToClient("Your name added to data.", id);
+            auth = true;
+        }
+        //Если имя существует - проверяем совпадение id
+        else {
+            System.out.println("playerData.get(nameOfPlayer)= " + playerData.get(nameOP));
+            System.out.println("pID = " + id);
+            if(playerData.get(nameOP)==id) {
+                auth = true;
+            }
+            else {
+                writeMsgToClient("Name [" + nameOP + "] is already exist. Enter another name.", id);
+                System.out.println("Name [" + nameOP + "] is already exist.");
+            }
+        }
+        return auth;
+
     }
 
     public void deleteClientFromList(int id){
@@ -182,7 +184,7 @@ public class Warships {
 
         int pID;
         BufferedReader reader;
-        PrintWriter writer;
+//        PrintWriter writer;
         Socket sock;
         ObjectOutputStream oos;
 
@@ -196,7 +198,7 @@ public class Warships {
                 reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
                 System.out.println("Input stream created");
 //                writer = new PrintWriter(sock.getOutputStream());
-                System.out.println("Output stream created");
+//                System.out.println("Output stream created");
 
                 oos = new ObjectOutputStream(sock.getOutputStream());
                 System.out.println("Object Output stream created");
@@ -238,7 +240,9 @@ public class Warships {
                         writeMsgToClient(enteredCommand, pID);
 
                         System.out.println("MMMsg from client: " + msgFromClient);
+
                         //Обработка сообщения от клиента
+                        //Авторизация
                         try {
                             if (authorize(nameOfPlayer, pID) == true) {
                                 writeMsgToClient("Authorize passed", pID);
@@ -269,19 +273,20 @@ public class Warships {
                                         }
                                     } else writeMsgToClient("Game is over", pID);
                                 } else {
+                                    /*
+                                    //Если игры не существует с даными игроками:
+                                     */
                                     writeMsgToClient("You can start a new game by entering 'Start'", pID);
                                     switch (command) {
                                         case STARTSOLO:
                                             currentGame = new Game(nameOfPlayer);
+                                            System.out.println("New game was created");
                                             ArrayList<String> playerList = new ArrayList<>();
                                             playerList.add(nameOfPlayer);
                                             gameData.put(currentGame, playerList);
-                                            System.out.println("New game was created");
                                             writeMsgToClient("New game was created", pID);
+                                            writeMsgToClient("GameFile", pID);
                                             oos.writeObject(currentGame);
-
-                                            //new Thread(new GameSender(sock, nameOfPlayer, pID)).start();
-
                                             break;
                                         case START:
                                             QueueOfPlayersHandler.queueOfPlayers.offer(nameOfPlayer);
@@ -307,6 +312,7 @@ public class Warships {
                 e.printStackTrace();
             }
         }
+
         public class GameSender implements Runnable{
             Socket sk;
             Game gm;
@@ -343,6 +349,10 @@ public class Warships {
             }
         }
 
+
+
+
+
     }
 
     private static class QueueOfPlayersHandler implements Runnable {
@@ -361,9 +371,9 @@ public class Warships {
                     Game game = new Game(fistInQueue, secondInQueue);
                     System.out.println("New game with players " + fistInQueue + " and " + secondInQueue + " created");
                     gameData.put(game, players);
-                    writeMsgToClient("Your game with player " + secondInQueue + " is ready", playerData.get(fistInQueue));
+//                    writeMsgToClient("Your game with player " + secondInQueue + " is ready", playerData.get(fistInQueue));
 //                    writeMsgToClient("endMessage", playerData.get(fistInQueue));
-                    writeMsgToClient("Your game with player " + fistInQueue + " is ready", playerData.get(secondInQueue));
+//                    writeMsgToClient("Your game with player " + fistInQueue + " is ready", playerData.get(secondInQueue));
 //                    writeMsgToClient("endMessage", playerData.get(secondInQueue));
 
 

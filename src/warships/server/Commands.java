@@ -9,7 +9,8 @@ public enum Commands {
     STARTSOLO("StartSolo"),
     END("End"),
     HELP("Help"),
-    EXIT("Exit");
+    EXIT("Exit"),
+    CHECK("Check");
 
     private final String stringValue;
 

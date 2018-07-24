@@ -11,15 +11,15 @@ public class Player {
 
     private String nameOfPlayer;
 
-    BufferedReader reader;
-    BufferedReader keyboard;
-    PrintWriter writer;
-    ObjectInputStream ois;
+//    private BufferedReader reader;
+    private BufferedReader keyboard;
+    private PrintWriter writer;
+    private ObjectInputStream ois;
 
-    Socket sock;
-    Game currentGame;
+    private Socket sock;
+    protected Game currentGame;
 
-    private Field playerField;
+    protected Field playerField;
     private Field enemyField;
 
     public static void main(String[] args) {
@@ -33,7 +33,6 @@ public class Player {
         //speaking();
         new Thread(new PlayerListener()).start();
         new Thread(new PlayerWriter()).start();
-//        new Thread(new StartGettingFiles()).start();
     }
 
     private void connect(){
@@ -63,36 +62,38 @@ public class Player {
         @Override
         public void run() {
             try {
-                System.out.println("Reader loading...");
-//                reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+//                System.out.println("Reader loading...");
                 ois = new ObjectInputStream(sock.getInputStream());
-                System.out.println("Reader created");
+//                System.out.println("Reader created");
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
             while (true) {
-                String receivedMessage = "";
+                String receivedMessage;
                 try {
-                    if (ois.readObject() != null) {
-                        Object obj = ois.readObject();
-                        if (obj instanceof String) {
-                            System.out.println("K = " + k);
-                            k++;
-                            receivedMessage = String.valueOf(ois.readObject());
-                            System.out.println("Received message: " + receivedMessage);
-                        } else if (obj instanceof Game) {
-                            currentGame = (Game) ois.readObject();
-//                        playerField = currentGame.firstField;
-//                        System.out.println("PLAYER FILES OWNER: " + playerField.getFieldOwner() );
-                            System.out.println("PLAYER FILES OWNER: ");
-                        } else {
-                            System.out.println("no files ");
-                        }
+//                    System.out.println("Reading object");
+//                    System.out.println("Identifying object");
+                    receivedMessage = (String)ois.readObject();
+                    /*
+                    //После получения строки GameFile - получаем файл с игрой
+                    //и обрабатываем его
+                     */
+                    if (receivedMessage.equalsIgnoreCase("GameFile")){
+//                        System.out.println("Object type = Game");
+                        currentGame = (Game) ois.readObject();
+                        playerField = currentGame.firstField;
+                        enemyField = currentGame.secondField;
+                        System.out.println("Your field");
+                        playerField.print(nameOfPlayer);
+                        System.out.println();
+                        enemyField.print("BOT");
+                        System.out.println("PLAYER FILES OWNER: " + playerField.getFieldOwner());
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (ClassNotFoundException e) {
+                    else{
+                        System.out.println("Received message: " + receivedMessage);
+                    }
+                } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 }
             }
@@ -114,8 +115,8 @@ public class Player {
                         String msgEntered = keyboard.readLine();
 
                         if (!msgEntered.isEmpty()) {
-                            String firstWord = "";
-                            String secondWord = "";
+                            String firstWord;
+                            String secondWord;
                             String msgEdited = msgEntered.replaceAll("\\s", "");
 
                             if (msgEdited.equalsIgnoreCase("exit")) {
@@ -156,38 +157,6 @@ public class Player {
             }
         }
 
-    private class StartGettingFiles implements Runnable {
-
-        @Override
-        public void run() {
-
-            try {
-                System.out.println("Going to create object input stream");
-                ois = new ObjectInputStream(sock.getInputStream());
-                System.out.println("done");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            while (true) {
-                try {
-                            System.out.println("------going to get file");
-                            Game currentGame = (Game) ois.readObject();
-                            playerField = currentGame.firstField;
-                            //enemyField = currentGame.secondField;
-                        System.out.println("*/*/*/*/*/Field1 owner: "+ playerField.getFieldOwner());
-                            System.out.println("------Game file received");
-
-                        // currentGame.firstField.print(nameOfPlayer);
-
-                    } catch(IOException e){
-                    e.printStackTrace();
-                    } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
-                }
-
-            }
-        }
-    }
     public String getNameOfPlayer() {
         return nameOfPlayer;
     }
@@ -201,8 +170,8 @@ public class Player {
             System.out.println("Trying to close");
             writer.close();
             System.out.println("Writer closed");
-            reader.close();
-            System.out.println("Reader closed");
+//            reader.close();
+//            System.out.println("Reader closed");
             keyboard.close();
             System.out.println("Keyboard closed");
             sock.close();

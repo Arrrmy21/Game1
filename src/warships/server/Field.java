@@ -62,12 +62,11 @@ public class Field implements Serializable{
 
         int[][] rezerv = new int[height][width];
 
-        for (int i = 0; i < height; i++) {
+        for (int i = 0; i < height; i++)
             for (int j = 0; j < width; j++) {
                 rezerv[i][j] = matrix[i][j];
             }
-        }
-        if(name == fieldOwner){
+        if(name.equals(fieldOwner)){
             for(Coord coord : listOfShips){
                 rezerv[coord.y][coord.x] = 1;
             }
