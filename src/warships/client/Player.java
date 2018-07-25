@@ -17,7 +17,8 @@ public class Player {
     private ObjectInputStream ois;
 
     private Socket sock;
-    protected Game currentGame;
+
+    private Game currentGame;
 
     protected Field playerField;
     private Field enemyField;
@@ -30,9 +31,9 @@ public class Player {
         connect();
         setUpNetwork();
 
-        //speaking();
         new Thread(new PlayerListener()).start();
         new Thread(new PlayerWriter()).start();
+        new Thread(new Pinger()).start();
     }
 
     private void connect(){
@@ -54,11 +55,11 @@ public class Player {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+
     }
 
     private class PlayerListener implements Runnable {
 
-        int k = 0;
         @Override
         public void run() {
             try {
@@ -81,13 +82,13 @@ public class Player {
                      */
                     if (receivedMessage.equalsIgnoreCase("GameFile")){
 //                        System.out.println("Object type = Game");
-                        currentGame = (Game) ois.readObject();
+                        setCurrentGame((Game) ois.readObject());
                         playerField = currentGame.firstField;
                         enemyField = currentGame.secondField;
                         System.out.println("Your field");
                         playerField.print(nameOfPlayer);
                         System.out.println();
-                        enemyField.print("BOT");
+                        enemyField.print("");
                         System.out.println("PLAYER FILES OWNER: " + playerField.getFieldOwner());
                     }
                     else{
@@ -101,64 +102,100 @@ public class Player {
     }
 
     private class PlayerWriter implements Runnable {
-            @Override
-            public void run() {
+        @Override
+        public void run() {
+            try {
+                System.out.println("Writer loading...");
+                writer = new PrintWriter(new OutputStreamWriter(sock.getOutputStream()));
+                System.out.println("Writer created");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            while (true) {
                 try {
-                    System.out.println("Writer loading...");
-                    writer = new PrintWriter( new OutputStreamWriter(sock.getOutputStream()));
-                    System.out.println("Writer created");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                while (true) {
-                    try {
-                        String msgEntered = keyboard.readLine();
+                    String msgEntered = keyboard.readLine();
+                    if (!msgEntered.isEmpty()) {
+                        String firstWord;
+                        String secondWord;
+                        String msgEdited = msgEntered.replaceAll("\\s", "");
 
-                        if (!msgEntered.isEmpty()) {
-                            String firstWord;
-                            String secondWord;
-                            String msgEdited = msgEntered.replaceAll("\\s", "");
-
-                            if (msgEdited.equalsIgnoreCase("exit")) {
-                                closeConnection();
-                                break;
-                            }
+                        if (msgEdited.equalsIgnoreCase("exit")) {
+                            closeConnection();
+                            break;
+                        }
                             /*
                             // Символ "=" означает присваивание имени
                              */
-                            if (msgEdited.contains("=")) {
-                                firstWord = (msgEdited.split("=")[0]);
-                                secondWord = (msgEdited.split("=")[1]);
-                                System.out.println("first word = " + firstWord);
-                                System.out.println("second word = " + secondWord);
-                                if (firstWord.equalsIgnoreCase("name")) {
-                                    setNameOfPlayer(secondWord);
-                                }
+                        if (msgEdited.contains("=")) {
+                            firstWord = (msgEdited.split("=")[0]);
+                            secondWord = (msgEdited.split("=")[1]);
+                            System.out.println("first word = " + firstWord);
+                            System.out.println("second word = " + secondWord);
+                            if (firstWord.equalsIgnoreCase("name")) {
+                                setNameOfPlayer(secondWord);
+                            }
                                 /*
                                 //Если игрок не присваивает себе имя - идёт проверка на наличие имени
                                  */
-                            } else if (getNameOfPlayer() == null) {
-                                System.out.println("Enter your name first by [name = <your name>]");
-                            } else {
-                                System.out.println("name of player = " + getNameOfPlayer());
-                                String msgToServer = getNameOfPlayer() + ":" + msgEdited;
-                                System.out.println("Msg to server: " + msgToServer);
-                                if (msgToServer != null) {
-                                    writer.println(msgToServer);
-                                    writer.flush();
-                                }
+                        } else if (getNameOfPlayer() == null) {
+                            System.out.println("Enter your name first by [name = <your name>]");
+                        } else {
+                            System.out.println("name of player = " + getNameOfPlayer());
+                            String msgToServer = getNameOfPlayer() + ":" + msgEdited;
+                            System.out.println("Msg to server: " + msgToServer);
+                            if (msgToServer != null) {
+                                writer.println(msgToServer);
+//                                    writer.flush();
                             }
                         }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        System.out.println("Ошибка ввода");
+                        writer.flush();
                     }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.println("Ошибка ввода");
                 }
             }
         }
+    }
+
+    /*
+    Класс кажде "seconds" секунд отправляет на сервер команду "Check" с актуальным номером хода для игрока.
+    Если номер на сервере отличается, значит другой игрок походил и сервер отправит данные об игре.
+     */
+    public class Pinger implements Runnable{
+        @Override
+        public void run() {
+            int seconds = 6;
+            System.out.println("Pinger creating");
+            while (true){
+                try {
+                    if (getCurrentGame() != null) {
+//                        System.out.println("i want to send 'check'");
+                        String checkMessage = (getNameOfPlayer() +":Check:" + getCurrentGame().getStep());
+//                        System.out.println("CCCCCCCCheck msg: " + checkMessage);
+
+                        writer.println(checkMessage);
+                        writer.flush();
+                    }
+                    Thread.sleep(seconds * 1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 
     public String getNameOfPlayer() {
         return nameOfPlayer;
+    }
+
+    public Game getCurrentGame() {
+        return currentGame;
+    }
+
+    public void setCurrentGame(Game currentGame) {
+        this.currentGame = currentGame;
     }
 
     public void setNameOfPlayer(String name) {

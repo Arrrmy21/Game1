@@ -102,6 +102,9 @@ public class Warships {
             case "startsolo":
                 command = Commands.STARTSOLO;
                 break;
+            case "check":
+                command = Commands.CHECK;
+                break;
             default:
                 command = Commands.HELP;
                 break;
@@ -109,7 +112,8 @@ public class Warships {
         return command;
     }
 
-    private synchronized Coord getCoodrinates(String stringFromClient){
+    private synchronized Coord getCoodrinates(String stringFromClient) {
+
         String strCoords[] = stringFromClient.split(",");
         int[] intCoords = new int[2];
         for (int i = 0; i < 2; i++)
@@ -129,6 +133,7 @@ public class Warships {
         return isNameExist;
     }
 
+//    Отправка сообщения клиенту, где message - сообщение, id- номер клиента в базе.
     public void writeMsgToClient(String message, int id){
         try {
             for (ClientHandler client : clients){
@@ -184,7 +189,6 @@ public class Warships {
 
         int pID;
         BufferedReader reader;
-//        PrintWriter writer;
         Socket sock;
         ObjectOutputStream oos;
 
@@ -213,12 +217,14 @@ public class Warships {
         public void run() {
 
             try {
+                //noinspection InfiniteLoopStatement
                 while (true) {
                     Game currentGame;
-                    String nameOfPlayer = "";
-                    Commands command = null;
+                    String nameOfPlayer;
+                    Commands command;
                     Coord coord = null;
-                    String msgFromClient = "";
+                    String msgFromClient;
+                    int stepOfGame = 999;
 
                     while (!(msgFromClient = reader.readLine()).isEmpty()) {
                         //Parse
@@ -231,6 +237,14 @@ public class Warships {
                         } else if (getMsg.length == 3) {
                             nameOfPlayer = getMsg[0];
                             command = detectCommand(getMsg[1]);
+                            /*
+                            //если в getMsg[2] 1 симаол - это № хода игры. Если >1 - это координата.
+                             */
+                            if(getMsg[2].length()==1){
+                                stepOfGame = Integer.parseInt(getMsg[2]);
+//                                System.out.println("Step og game = " + stepOfGame);
+                            }
+                            else
                             coord = getCoodrinates(getMsg[2]);
                         } else {
                             writeMsgToClient("Wrong command", pID);
@@ -242,16 +256,17 @@ public class Warships {
                         System.out.println("MMMsg from client: " + msgFromClient);
 
                         //Обработка сообщения от клиента
-                        //Авторизация
+
                         try {
-                            if (authorize(nameOfPlayer, pID) == true) {
+                            //Авторизация
+                            if (authorize(nameOfPlayer, pID)) {
                                 writeMsgToClient("Authorize passed", pID);
                                 //Существует ли игра
-                                if (checkGameStatus(nameOfPlayer) == true) {
+                                if (checkGameStatus(nameOfPlayer)) {
                                     writeMsgToClient("Your game is available", pID);
                                     currentGame = getGame(nameOfPlayer);
                                     //Не закончилась ли игра
-                                    if (currentGame.isEndOfGame() == false) {
+                                    if (!currentGame.isEndOfGame()) {
 
 
                                         //Чья очередь ходить
@@ -277,29 +292,32 @@ public class Warships {
                                     //Если игры не существует с даными игроками:
                                      */
                                     writeMsgToClient("You can start a new game by entering 'Start'", pID);
-                                    switch (command) {
-                                        case STARTSOLO:
-                                            currentGame = new Game(nameOfPlayer);
-                                            System.out.println("New game was created");
-                                            ArrayList<String> playerList = new ArrayList<>();
-                                            playerList.add(nameOfPlayer);
-                                            gameData.put(currentGame, playerList);
-                                            writeMsgToClient("New game was created", pID);
-                                            writeMsgToClient("GameFile", pID);
-                                            oos.writeObject(currentGame);
-                                            break;
-                                        case START:
-                                            QueueOfPlayersHandler.queueOfPlayers.offer(nameOfPlayer);
-                                            writeMsgToClient("Waiting for an opponent", pID);
-                                            break;
-                                    }
+                                }
+                                switch (command) {
+                                    case STARTSOLO:
+                                        currentGame = new Game(nameOfPlayer);
+                                        System.out.println("New game was created");
+                                        ArrayList<String> playerList = new ArrayList<>();
+                                        playerList.add(nameOfPlayer);
+                                        gameData.put(currentGame, playerList);
+                                        writeMsgToClient("New game was created", pID);
+                                        writeMsgToClient("GameFile", pID);
+                                        oos.writeObject(currentGame);
+                                        break;
+                                    case START:
+                                        QueueOfPlayersHandler.queueOfPlayers.offer(nameOfPlayer);
+                                        writeMsgToClient("Waiting for an opponent", pID);
+                                        break;
+                                    case CHECK:
+//                                        System.out.println("===== Step of game: " + stepOfGame);
+//                                        writeMsgToClient("CHECK CHECK CHECK", pID);
+                                        break;
                                 }
                             }
                             //Если авторизоваться не получилось:
                             else {
                                 writeMsgToClient("Enter new name", pID);
                             }
-                            //writeMsgToClient("endMessage", pID);
                             oos.flush();
                         } catch (Exception e) {
                             e.printStackTrace();

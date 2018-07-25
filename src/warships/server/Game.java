@@ -18,6 +18,13 @@ public class Game implements Serializable {
     private boolean turnOfFirstPlayerToMove = true;
     private boolean turnOfSecondPlayerToMove = false;
 
+
+
+    /*
+    //При начале игры шаг будет равен 1. Значит ход первого игрока. Чётное число будет означать ход 2го игрока.
+     */
+    private int step;
+
     /*
     //Создание игры для 2-х игроков
      */
@@ -43,6 +50,7 @@ public class Game implements Serializable {
 
         firstField = new Field(nameOfFirstPlayer);
         secondField = new Field("BOT");
+        step = 1;
         endOfGame = false;
     }
 
@@ -124,6 +132,16 @@ public class Game implements Serializable {
         else{
             return false;
         }
+    }
+
+    public int getStep(){
+        return step;
+    }
+    public void setStep(int step) {
+        this.step = step;
+    }
+    public void incremetStep(){
+        setStep(getStep()+1);
     }
 
 
