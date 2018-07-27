@@ -15,10 +15,6 @@ public class Game implements Serializable {
 
     public String[] playersInGame = new String[2];
 
-    private boolean turnOfFirstPlayerToMove = true;
-    private boolean turnOfSecondPlayerToMove = false;
-
-
 
     /*
     //При начале игры шаг будет равен 1. Значит ход первого игрока. Чётное число будет означать ход 2го игрока.
@@ -57,42 +53,19 @@ public class Game implements Serializable {
     public boolean isEndOfGame() {
         return endOfGame;
     }
-    /*
-    //Смена хода
-     */
-    private void changeOfTurn(){
-        if (turnOfFirstPlayerToMove == false && turnOfSecondPlayerToMove == true) {
-            turnOfFirstPlayerToMove = true;
-            turnOfSecondPlayerToMove = false;
-        }
-        else {
-            turnOfFirstPlayerToMove = false;
-            turnOfSecondPlayerToMove = true;
-        }
-    }
+
 
     public void makeMove(String nameOP, Commands command, Coord coord){
-        if (nameOP==nameOfFirstPlayer){
 
-        }
-            /*System.out.println("Enemy field: ");
-            secondField.print("");
-            System.out.println("list of ships: ");
-            for (Coord c : secondField.listOfShips)
-                System.out.println(c.x + " " + c.y);
-            System.out.println();
-            System.out.println("Alli field:");
-            firstField.print("ali");
-            System.out.println(firstField.getFieldOwner() + " power = " + firstField.getPower());
-            System.out.println(secondField.getFieldOwner() + " power = " + secondField.getPower());
-            System.out.println("Enter coords [0-9], [0-9]: X, Y");
-            checkWinStatus();*/
+
+            checkWinStatus();
         }
 
     private void getShoot() {
         int x = (int) (Math.random() * 9);
         int y = (int) (Math.random() * 9);
         firstField.shoot(new Coord(x, y));
+        incremetStep();
     }
 
     public void makeShoot(String nameOP, Coord coord){
@@ -102,6 +75,7 @@ public class Game implements Serializable {
         else {
             firstField.shoot(coord);
         }
+        incremetStep();
     }
 
     public void putShip(String nameOP, Coord coord){
@@ -123,10 +97,10 @@ public class Game implements Serializable {
         }
     }
     public boolean turnToMove(String name){
-        if (nameOfFirstPlayer==name && turnOfFirstPlayerToMove == true){
+        if (name.equals(nameOfFirstPlayer) && getStep()%2!=0 ){
             return true;
         }
-        else if (nameOfSecondPlayer==name && turnOfSecondPlayerToMove == true){
+        else if (name.equals(nameOfSecondPlayer) && getStep()%2 == 0){
             return true;
         }
         else{

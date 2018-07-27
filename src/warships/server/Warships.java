@@ -11,7 +11,7 @@ import java.util.Queue;
 
 public class Warships {
 
-    ServerSocket serverSocket;
+    private ServerSocket serverSocket;
     private int playerID = 0;
 
 
@@ -34,12 +34,11 @@ public class Warships {
         try{
             serverSocket = new ServerSocket(4949);
             while(true){
-                System.out.println("Server is waiting for client.");
+                System.out.println("----------Server is waiting for client.");
                 Socket clientSocket = serverSocket.accept();
                 ClientHandler client = new ClientHandler(clientSocket, ++playerID);
                 clients.add(client);
-                Thread t = new Thread(client);
-                t.start();
+                new Thread(client).start();
                 System.out.println("Player connected to server.");
             }
         }
@@ -51,28 +50,23 @@ public class Warships {
 
     public void closeConnection() {
         try {
-
             serverSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-//    Существует ли имя в базе игроков.
-
-
 //    Проверяем если ли игрок с таким именем в какой-то игре и активна ли игра.
     public synchronized boolean checkGameStatus(String nameOP){
         boolean isGameAvailable = false;
         for (Game gameKeys : gameData.keySet()){
-            for(int i = 0; i<2; i++){
-                if (gameKeys.playersInGame[i].equalsIgnoreCase(nameOP)){
-                    if(gameKeys.isEndOfGame() == false) {
+            for(int i = 0; i<2; i++)
+                if (gameKeys.playersInGame[i].equalsIgnoreCase(nameOP)) {
+                    if (gameKeys.isEndOfGame() == false) {
                         isGameAvailable = true;
                         break;
                     }
                 }
-            }
         }
         return isGameAvailable;
     }
@@ -124,17 +118,14 @@ public class Warships {
     public synchronized boolean checkStatusOfPlayerName(String nameOP) {
         boolean isNameExist = false;
             for (String name : playerData.keySet()) {
-                if (nameOP.equalsIgnoreCase(name)) {
+                if (nameOP.equalsIgnoreCase(name))
                     isNameExist = true;
-                } else {
-                    isNameExist = false;
-                }
             }
         return isNameExist;
     }
 
 //    Отправка сообщения клиенту, где message - сообщение, id- номер клиента в базе.
-    public void writeMsgToClient(String message, int id){
+    public synchronized void writeMsgToClient(String message, int id){
         try {
             for (ClientHandler client : clients){
                 if (id==client.pID){
@@ -191,7 +182,7 @@ public class Warships {
         BufferedReader reader;
         Socket sock;
         ObjectOutputStream oos;
-
+        Game currentGame;
 
 
         public ClientHandler(Socket clientSocket, int id) {
@@ -201,9 +192,6 @@ public class Warships {
             try {
                 reader = new BufferedReader(new InputStreamReader(sock.getInputStream()));
                 System.out.println("Input stream created");
-//                writer = new PrintWriter(sock.getOutputStream());
-//                System.out.println("Output stream created");
-
                 oos = new ObjectOutputStream(sock.getOutputStream());
                 System.out.println("Object Output stream created");
 
@@ -219,7 +207,7 @@ public class Warships {
             try {
                 //noinspection InfiniteLoopStatement
                 while (true) {
-                    Game currentGame;
+
                     String nameOfPlayer;
                     Commands command;
                     Coord coord = null;
@@ -263,7 +251,7 @@ public class Warships {
                                 writeMsgToClient("Authorize passed", pID);
                                 //Существует ли игра
                                 if (checkGameStatus(nameOfPlayer)) {
-                                    writeMsgToClient("Your game is available", pID);
+//                                    writeMsgToClient("Your game is available", pID);
                                     currentGame = getGame(nameOfPlayer);
                                     //Не закончилась ли игра
                                     if (!currentGame.isEndOfGame()) {
@@ -271,18 +259,23 @@ public class Warships {
 
                                         //Чья очередь ходить
                                         if (currentGame.turnToMove(nameOfPlayer)) {
-                                            currentGame.makeMove(nameOfPlayer, command, coord);
-                                            currentGame.checkWinStatus();
+//                                            writeMsgToClient("MOVE!!!", pID);
+//                                            currentGame.makeMove(nameOfPlayer, command, coord);
+//                                            currentGame.checkWinStatus();
                                             //Реакция на команду игрока
-                                            /*switch (command) {
+                                            switch (command) {
                                                 case SHOOT:
                                                     currentGame.makeShoot(nameOfPlayer, coord);
+                                                    Thread.sleep(2000);
+                                                    currentGame.makeShoot("BOT", new Coord(1,1));
                                                     break;
                                                 case PUT:
                                                     currentGame.putShip(nameOfPlayer, coord);
                                                      break;
-                                            }*/
+                                            }
                                             writeMsgToClient("Govorit server: " + msgFromClient, pID);
+
+
                                         } else {
                                             writeMsgToClient("It's not your turn to move", pID);
                                         }
