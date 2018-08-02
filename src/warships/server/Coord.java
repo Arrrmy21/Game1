@@ -3,10 +3,10 @@ package warships.server;
 import java.io.Serializable;
 
 public class Coord implements Serializable {
-    public int x;
-    public int y;
+    int x;
+    int y;
 
-    public Coord(int x, int y) {
+    Coord(int x, int y) {
         this.x = x;
         this.y = y;
     }

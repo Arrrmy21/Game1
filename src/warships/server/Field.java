@@ -31,6 +31,8 @@ public class Field implements Serializable{
         putShip(new Coord(4 , 4));
         putShip(new Coord(1 , 0));
         putShip(new Coord(0 , 8));
+        shoot(new Coord(1,1));
+        shoot(new Coord(3,3));
 
 
     }
@@ -100,7 +102,7 @@ public class Field implements Serializable{
         }
     }
 
-    protected void putShip(Coord coord){
+    void putShip(Coord coord){
         int value = getValue(coord);
         if (value == 0 ) {
             listOfShips.add(coord);
@@ -110,7 +112,7 @@ public class Field implements Serializable{
             System.out.println("try another one cell");
     }
 
-    protected void shoot(Coord coord){
+    void shoot(Coord coord){
 
         int value = getValue(coord);
         if (listOfShips.removeIf(coord1 -> coord1.equals(coord))){

@@ -6,22 +6,20 @@ import warships.server.Game;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Player {
 
     private String nameOfPlayer;
 
-//    private BufferedReader reader;
     private BufferedReader keyboard;
     private PrintWriter writer;
     private ObjectInputStream ois;
 
     private Socket sock;
 
-    private Game currentGame;
-
-    protected Field playerField;
-    private Field enemyField;
+    Game currentGame= null;
+    private int currentStep = 0;
 
     public static void main(String[] args) {
         new Player().go();
@@ -47,15 +45,12 @@ public class Player {
     }
 
     private void setUpNetwork() {
-
         try {
             keyboard = new BufferedReader(new InputStreamReader(System.in));
-
             System.out.println("Connection with keyboard created.");
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-
     }
 
     private class PlayerListener implements Runnable {
@@ -63,37 +58,51 @@ public class Player {
         @Override
         public void run() {
             try {
-//                System.out.println("Reader loading...");
                 ois = new ObjectInputStream(sock.getInputStream());
-//                System.out.println("Reader created");
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
             while (true) {
-                String receivedMessage;
+                AtomicReference<String> receivedMessage;
+                receivedMessage = new AtomicReference<>();
                 try {
-//                    System.out.println("Reading object");
-//                    System.out.println("Identifying object");
-                    receivedMessage = (String)ois.readObject();
+                    receivedMessage.set((String) ois.readObject());
                     /*
                     //После получения строки GameFile - получаем файл с игрой
                     //и обрабатываем его
                      */
-                    if (receivedMessage.equalsIgnoreCase("GameFile")){
-//                        System.out.println("Object type = Game");
-                        setCurrentGame((Game) ois.readObject());
-                        playerField = currentGame.firstField;
-                        enemyField = currentGame.secondField;
-                        System.out.println("Your field");
+                    if (receivedMessage.get().equalsIgnoreCase("GameFile")){
+                        currentGame = (Game) ois.readObject();
+                        System.out.println("Actual step= " + getCurrentStep());
+                        setCurrentStep(currentGame.getStep());
+                        System.out.println("New step= " + getCurrentStep());
+                        /*
+                        Если имя игрока в игре занесено как первый игрок.
+                         */
+                        Field playerField;
+                        Field enemyField;
+                        if(getNameOfPlayer().equals(getCurrentGame().playersInGame[0])) {
+                            playerField = getCurrentGame().firstField;
+                            enemyField = getCurrentGame().secondField;
+                        }
+                        /*
+                        Если имя игрока в игре занесено как второй игрок
+                         */
+                        else {
+                            playerField = getCurrentGame().secondField;
+                            enemyField = getCurrentGame().firstField;
+                        }
+                        System.out.println("Player field:");
                         playerField.print(nameOfPlayer);
-                        System.out.println();
+                        System.out.println("Enemy field:");
                         enemyField.print("");
-                        System.out.println("PLAYER FILES OWNER: " + playerField.getFieldOwner());
+                        currentGame = null;
                     }
                     else{
-                        System.out.println("Received message: " + receivedMessage);
+                        System.out.println("Received message: " + receivedMessage.get());
                     }
+
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 }
@@ -143,10 +152,7 @@ public class Player {
                             System.out.println("name of player = " + getNameOfPlayer());
                             String msgToServer = getNameOfPlayer() + ":" + msgEdited;
                             System.out.println("Msg to server: " + msgToServer);
-                            if (msgToServer != null) {
-                                writer.println(msgToServer);
-//                                    writer.flush();
-                            }
+                            writer.println(msgToServer);
                         }
                         writer.flush();
                     }
@@ -160,21 +166,26 @@ public class Player {
     }
 
     /*
-    Класс кажде "seconds" секунд отправляет на сервер команду "Check" с актуальным номером хода для игрока.
+    Класс каждые "seconds" секунд отправляет на сервер команду "Check" с актуальным номером хода для игрока.
     Если номер на сервере отличается, значит другой игрок походил и сервер отправит данные об игре.
      */
     public class Pinger implements Runnable{
         @Override
         public void run() {
-            int seconds = 6;
+            int seconds = 8;
             System.out.println("Pinger creating");
+            try {
+                Thread.sleep(seconds*1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             while (true){
+                String checkMessage;
                 try {
-                    if (getCurrentGame() != null) {
+                    if (getNameOfPlayer()!=null) {
 //                        System.out.println("i want to send 'check'");
-                        String checkMessage = (getNameOfPlayer() +":Check:" + getCurrentGame().getStep());
+                        checkMessage = (getNameOfPlayer() + ":Check:" + getCurrentStep());
 //                        System.out.println("CCCCCCCCheck msg: " + checkMessage);
-
                         writer.println(checkMessage);
                         writer.flush();
                     }
@@ -186,23 +197,31 @@ public class Player {
         }
     }
 
-    public String getNameOfPlayer() {
+    private String getNameOfPlayer() {
         return nameOfPlayer;
     }
 
-    public Game getCurrentGame() {
+    private Game getCurrentGame() {
         return currentGame;
     }
 
-    public void setCurrentGame(Game currentGame) {
-        this.currentGame = currentGame;
+//    public void setCurrentGame(Game currentGame) {
+//        this.currentGame = currentGame;
+//    }
+
+    private synchronized int getCurrentStep() {
+        return currentStep;
     }
 
-    public void setNameOfPlayer(String name) {
+    private void setCurrentStep(int curStep) {
+        currentStep = curStep;
+    }
+
+    private void setNameOfPlayer(String name) {
         this.nameOfPlayer = name;
     }
 
-    public void closeConnection() {
+    private void closeConnection() {
         try {
             System.out.println("Trying to close");
             writer.close();

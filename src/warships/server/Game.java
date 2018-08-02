@@ -8,13 +8,14 @@ public class Game implements Serializable {
     public Field firstField;
     public Field secondField;
 
+    private final int gID;
+
     private boolean endOfGame;
 
     private String nameOfFirstPlayer;
     private String nameOfSecondPlayer;
 
     public String[] playersInGame = new String[2];
-
 
     /*
     //При начале игры шаг будет равен 1. Значит ход первого игрока. Чётное число будет означать ход 2го игрока.
@@ -24,23 +25,25 @@ public class Game implements Serializable {
     /*
     //Создание игры для 2-х игроков
      */
-    public Game(String firstPlayerName, String secondPlayerName) {
+    Game(String firstPlayerName, String secondPlayerName, int id) {
         nameOfFirstPlayer = firstPlayerName;
         nameOfSecondPlayer = secondPlayerName;
-
+        gID = id;
         playersInGame[0] = nameOfFirstPlayer;
         playersInGame[1] = nameOfSecondPlayer;
 
         firstField = new Field(nameOfFirstPlayer);
         secondField = new Field(nameOfSecondPlayer);
+        step = 1;
         endOfGame = false;
     }
     /*
     //Создание игры для одного игрока
      */
-    public Game(String firstPlayerName) {
+    Game(String firstPlayerName, int id) {
         nameOfFirstPlayer = firstPlayerName;
         nameOfSecondPlayer = "BOT";
+        gID = id;
 
         playersInGame[0] = nameOfFirstPlayer;
 
@@ -50,7 +53,7 @@ public class Game implements Serializable {
         endOfGame = false;
     }
 
-    public boolean isEndOfGame() {
+    boolean isEndOfGame() {
         return endOfGame;
     }
 
@@ -65,17 +68,17 @@ public class Game implements Serializable {
         int x = (int) (Math.random() * 9);
         int y = (int) (Math.random() * 9);
         firstField.shoot(new Coord(x, y));
-        incremetStep();
+//        incrementStep();
     }
 
-    public void makeShoot(String nameOP, Coord coord){
+    void makeShoot(String nameOP, Coord coord){
         if (nameOP.equalsIgnoreCase(nameOfFirstPlayer)){
             secondField.shoot(coord);
         }
         else {
             firstField.shoot(coord);
         }
-        incremetStep();
+        setStep(getStep() + 1);
     }
 
     public void putShip(String nameOP, Coord coord){
@@ -87,7 +90,7 @@ public class Game implements Serializable {
         }
     }
 
-    public void checkWinStatus(){
+    private void checkWinStatus(){
         boolean checkStatus = false;
         if (firstField.getPower() == 0){
             endOfGame = true;
@@ -96,7 +99,7 @@ public class Game implements Serializable {
             endOfGame = true;
         }
     }
-    public boolean turnToMove(String name){
+    boolean turnToMove(String name){
         if (name.equals(nameOfFirstPlayer) && getStep()%2!=0 ){
             return true;
         }
@@ -111,11 +114,17 @@ public class Game implements Serializable {
     public int getStep(){
         return step;
     }
-    public void setStep(int step) {
-        this.step = step;
+
+    private synchronized void setStep(int st) {
+        step = st;
     }
-    public void incremetStep(){
-        setStep(getStep()+1);
+
+//    void incrementStep(){
+//        setStep(getStep() + 1);
+//    }
+
+    int getGID() {
+        return gID;
     }
 
 
