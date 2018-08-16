@@ -29,8 +29,7 @@ public class Field implements Serializable{
 
         putShip(new Coord(1 , 1));
         putShip(new Coord(4 , 4));
-        putShip(new Coord(1 , 0));
-        putShip(new Coord(0 , 8));
+
         shoot(new Coord(1,1));
         shoot(new Coord(3,3));
 

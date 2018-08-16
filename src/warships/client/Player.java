@@ -6,7 +6,7 @@ import warships.server.Game;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.Base64;
 
 public class Player {
 
@@ -15,10 +15,8 @@ public class Player {
     private BufferedReader keyboard;
     private PrintWriter writer;
     private ObjectInputStream ois;
-
     private Socket sock;
 
-    Game currentGame= null;
     private int currentStep = 0;
 
     public static void main(String[] args) {
@@ -27,11 +25,12 @@ public class Player {
 
     private void go() {
         connect();
-        setUpNetwork();
+        keyboardListener();
 
         new Thread(new PlayerListener()).start();
         new Thread(new PlayerWriter()).start();
         new Thread(new Pinger()).start();
+
     }
 
     private void connect(){
@@ -44,17 +43,19 @@ public class Player {
         }
     }
 
-    private void setUpNetwork() {
+    private void keyboardListener() {
         try {
             keyboard = new BufferedReader(new InputStreamReader(System.in));
             System.out.println("Connection with keyboard created.");
         } catch (Exception ex) {
             ex.printStackTrace();
+            closeConnection();
         }
     }
 
     private class PlayerListener implements Runnable {
 
+//        Game currentGame= null;
         @Override
         public void run() {
             try {
@@ -64,50 +65,64 @@ public class Player {
             }
 
             while (true) {
-                AtomicReference<String> receivedMessage;
-                receivedMessage = new AtomicReference<>();
+                String receivedMessage;
                 try {
-                    receivedMessage.set((String) ois.readObject());
+                    receivedMessage = (String) ois.readObject();
                     /*
                     //После получения строки GameFile - получаем файл с игрой
                     //и обрабатываем его
                      */
-                    if (receivedMessage.get().equalsIgnoreCase("GameFile")){
-                        currentGame = (Game) ois.readObject();
-                        System.out.println("Actual step= " + getCurrentStep());
+                    if (receivedMessage.equalsIgnoreCase("GameFile")){
+//                        Game currentGame = (Game) ois.readObject();
+                        String gama = (String) ois.readObject();
+                        Game currentGame = (Game) fromString(gama);
+//                        System.out.println("Actual step= " + getCurrentStep());
                         setCurrentStep(currentGame.getStep());
-                        System.out.println("New step= " + getCurrentStep());
+//                        System.out.println("New step= " + getCurrentStep());
                         /*
                         Если имя игрока в игре занесено как первый игрок.
                          */
                         Field playerField;
                         Field enemyField;
-                        if(getNameOfPlayer().equals(getCurrentGame().playersInGame[0])) {
-                            playerField = getCurrentGame().firstField;
-                            enemyField = getCurrentGame().secondField;
+                        if(getNameOfPlayer().equals(currentGame.playersInGame[0])) {
+                            playerField = currentGame.firstField;
+                            enemyField = currentGame.secondField;
                         }
                         /*
                         Если имя игрока в игре занесено как второй игрок
                          */
                         else {
-                            playerField = getCurrentGame().secondField;
-                            enemyField = getCurrentGame().firstField;
+                            playerField = currentGame.secondField;
+                            enemyField = currentGame.firstField;
                         }
                         System.out.println("Player field:");
                         playerField.print(nameOfPlayer);
                         System.out.println("Enemy field:");
                         enemyField.print("");
-                        currentGame = null;
+                        System.out.println(currentGame.getScore());
                     }
                     else{
-                        System.out.println("Received message: " + receivedMessage.get());
+                        System.out.println("Received message: " + receivedMessage);
                     }
 
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
+                    closeConnection();
                 }
             }
+
         }
+
+        private Object fromString(String gama) throws IOException, ClassNotFoundException {
+            byte [] gameBytes = Base64.getDecoder().decode(gama);
+            ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(gameBytes));
+            Object obj = objectInputStream.readObject();
+            objectInputStream.close();
+            return  obj;
+        }
+//        private Game getCurrentGame() {
+//            return currentGame;
+//        }
     }
 
     private class PlayerWriter implements Runnable {
@@ -138,8 +153,8 @@ public class Player {
                         if (msgEdited.contains("=")) {
                             firstWord = (msgEdited.split("=")[0]);
                             secondWord = (msgEdited.split("=")[1]);
-                            System.out.println("first word = " + firstWord);
-                            System.out.println("second word = " + secondWord);
+//                            System.out.println("first word = " + firstWord);
+//                            System.out.println("second word = " + secondWord);
                             if (firstWord.equalsIgnoreCase("name")) {
                                 setNameOfPlayer(secondWord);
                             }
@@ -149,9 +164,9 @@ public class Player {
                         } else if (getNameOfPlayer() == null) {
                             System.out.println("Enter your name first by [name = <your name>]");
                         } else {
-                            System.out.println("name of player = " + getNameOfPlayer());
+//                            System.out.println("name of player = " + getNameOfPlayer());
                             String msgToServer = getNameOfPlayer() + ":" + msgEdited;
-                            System.out.println("Msg to server: " + msgToServer);
+//                            System.out.println("Msg to server: " + msgToServer);
                             writer.println(msgToServer);
                         }
                         writer.flush();
@@ -160,9 +175,11 @@ public class Player {
                 } catch (Exception e) {
                     e.printStackTrace();
                     System.out.println("Ошибка ввода");
+                    closeConnection();
                 }
             }
         }
+
     }
 
     /*
@@ -185,12 +202,14 @@ public class Player {
                     if (getNameOfPlayer()!=null) {
 //                        System.out.println("i want to send 'check'");
                         checkMessage = (getNameOfPlayer() + ":Check:" + getCurrentStep());
+//                        System.out.println((getNameOfPlayer() + ":Check:" + getCurrentStep()));
 //                        System.out.println("CCCCCCCCheck msg: " + checkMessage);
                         writer.println(checkMessage);
                         writer.flush();
                     }
                     Thread.sleep(seconds * 1000);
                 } catch (InterruptedException e) {
+                    closeConnection();
                     e.printStackTrace();
                 }
             }
@@ -201,9 +220,7 @@ public class Player {
         return nameOfPlayer;
     }
 
-    private Game getCurrentGame() {
-        return currentGame;
-    }
+
 
 //    public void setCurrentGame(Game currentGame) {
 //        this.currentGame = currentGame;
@@ -223,13 +240,13 @@ public class Player {
 
     private void closeConnection() {
         try {
-            System.out.println("Trying to close");
+            System.out.println("Trying to close connections:");
             writer.close();
             System.out.println("Writer closed");
-//            reader.close();
-//            System.out.println("Reader closed");
             keyboard.close();
             System.out.println("Keyboard closed");
+            ois.close();
+            System.out.println("OIS closed");
             sock.close();
             System.out.println("Socket closed");
 

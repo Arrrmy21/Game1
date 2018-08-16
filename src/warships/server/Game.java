@@ -58,10 +58,16 @@ public class Game implements Serializable {
     }
 
 
-    public void makeMove(String nameOP, Commands command, Coord coord){
-
-
-            checkWinStatus();
+    synchronized void makeMove(String nameOP, Commands command, Coord coord){
+        if (nameOP.equals(turnToMove())){
+            switch (command){
+                case SHOOT:
+                    makeShoot(nameOP, coord);
+                    setStep(getStep() + 1);
+                    break;
+            }
+        }
+        checkWinStatus();
         }
 
     private void getShoot() {
@@ -71,14 +77,13 @@ public class Game implements Serializable {
 //        incrementStep();
     }
 
-    void makeShoot(String nameOP, Coord coord){
+    private void makeShoot(String nameOP, Coord coord){
         if (nameOP.equalsIgnoreCase(nameOfFirstPlayer)){
             secondField.shoot(coord);
         }
         else {
             firstField.shoot(coord);
         }
-        setStep(getStep() + 1);
     }
 
     public void putShip(String nameOP, Coord coord){
@@ -90,8 +95,11 @@ public class Game implements Serializable {
         }
     }
 
+    public String getScore(){
+        return nameOfFirstPlayer + " - " + firstField.getPower() + " : " + secondField.getPower() + " - " + nameOfSecondPlayer;
+    }
+
     private void checkWinStatus(){
-        boolean checkStatus = false;
         if (firstField.getPower() == 0){
             endOfGame = true;
         }
@@ -99,15 +107,16 @@ public class Game implements Serializable {
             endOfGame = true;
         }
     }
-    boolean turnToMove(String name){
-        if (name.equals(nameOfFirstPlayer) && getStep()%2!=0 ){
-            return true;
+
+    String turnToMove(){
+        if (getStep()%2!=0 ){
+            return nameOfFirstPlayer;
         }
-        else if (name.equals(nameOfSecondPlayer) && getStep()%2 == 0){
-            return true;
+        else if (getStep()%2 == 0){
+            return nameOfSecondPlayer;
         }
         else{
-            return false;
+            return null;
         }
     }
 

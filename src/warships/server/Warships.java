@@ -4,10 +4,7 @@ package warships.server;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.*;
 
 public class Warships {
 
@@ -31,19 +28,18 @@ public class Warships {
 
     private void go() {
 
-        try{
+        try {
             serverSocket = new ServerSocket(4949);
             while (true) {
                 System.out.println("----------Server is waiting for client.");
                 Socket clientSocket = serverSocket.accept();
-                ClientHandler client = new ClientHandler(clientSocket, getPlayerID());
-                incrementPlayerID();
+                ClientHandler client = new ClientHandler(clientSocket, getPlayerAmountID());
+                incrementPlayerAmountID();
                 clients.add(client);
                 new Thread(client).start();
                 System.out.println("Player connected to server.");
             }
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             closeConnection();
         }
@@ -57,45 +53,45 @@ public class Warships {
         }
     }
 
-//    Проверяем если ли игрок с таким именем в какой-то игре и активна ли игра.
-    private synchronized boolean checkGameStatus(String nameOP){
-        boolean isGameAvailable = false;
+    //    Проверяем если ли игрок с таким именем в какой-то игре и активна ли игра.
+    private synchronized Game checkGameStatus(String nameOP) {
+
+        Game gm = null;
         for (Game gameValues : gameList.values()) {
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < 2; i++) {
                 if (gameValues.playersInGame[i].equalsIgnoreCase(nameOP)) {
                     if (!gameValues.isEndOfGame()) {
-                        isGameAvailable = true;
-                        break;
+                        gm = gameValues;
                     }
                 }
+            }
         }
-        return isGameAvailable;
+        return gm;
     }
 
-//    Получение игры из базы
-    private synchronized Game getGame(String nameOP){
+    //    Получение игры из базы, если игра не закончилась.
+    private synchronized Game getGame(String nameOP) {
         Game currGame = null;
-        for(Game game : gameList.values()){
-            if (game.playersInGame[0].equalsIgnoreCase(nameOP) || game.playersInGame[1].equalsIgnoreCase(nameOP)){
+        for (Game game : gameList.values()) {
+            if (game.playersInGame[0].equalsIgnoreCase(nameOP) || game.playersInGame[1].equalsIgnoreCase(nameOP)) {
                 currGame = game;
-            }
-            else {
+            } else {
                 System.out.println("Trouble with game in getGame method!!");
             }
         }
         return currGame;
     }
 
-//    Вовращение количества подключенных игроков
-    private synchronized int getPlayerID() {
+    //    Вовращение количества подключенных игроков
+    private synchronized int getPlayerAmountID() {
         return playerID;
     }
 
-    private synchronized void incrementPlayerID() {
+    private synchronized void incrementPlayerAmountID() {
         playerID++;
     }
 
-//    Возвращение количества созданных игр
+    //    Возвращение количества созданных игр
     static synchronized int getGameID() {
         return gameID;
     }
@@ -104,7 +100,7 @@ public class Warships {
         gameID++;
     }
 
-    private synchronized Commands detectCommand(String stringFromUser){
+    private synchronized Commands detectCommand(String stringFromUser) {
         Commands command;
         switch (stringFromUser.toLowerCase()) {
             case "shoot":
@@ -138,21 +134,21 @@ public class Warships {
         return new Coord(intCoords[0], intCoords[1]);
     }
 
-//    Проверка наличия имени в базе
+    //    Проверка наличия имени в базе
     private synchronized boolean checkStatusOfPlayerName(String nameOP) {
         boolean isNameExist = false;
-            for (String name : playerData.keySet()) {
-                if (nameOP.equalsIgnoreCase(name))
-                    isNameExist = true;
-            }
+        for (String name : playerData.keySet()) {
+            if (nameOP.equalsIgnoreCase(name))
+                isNameExist = true;
+        }
         return isNameExist;
     }
 
-//    Отправка сообщения клиенту, где message - сообщение, id- номер клиента в базе.
-    static synchronized void writeMsgToClient(String message, int id){
+    //    Отправка сообщения клиенту, где message - сообщение, id- номер клиента в базе.
+    static synchronized void writeMsgToClient(String message, int id) {
         try {
-            for (ClientHandler client : clients){
-                if (id==client.pID){
+            for (ClientHandler client : clients) {
+                if (id == client.pID) {
 //                    client.writer.println(message);
                     client.oos.writeObject(message);
                     client.oos.flush();
@@ -160,18 +156,17 @@ public class Warships {
                     break;
                 }
             }
-        }
-        catch (Exception ex){
+        } catch (Exception ex) {
             ex.printStackTrace();
             System.out.println("Sending error");
         }
     }
 
-//    Проверка наличия имени игрока в базе имён
-    private synchronized boolean authorize(String nameOP, int id){
+    //    Проверка наличия имени игрока в базе имён
+    private synchronized boolean authorize(String nameOP, int id) {
         boolean auth = false;
         //Если в базе нет такого имени - заносим в базу.
-        if(!checkStatusOfPlayerName(nameOP)){
+        if (!checkStatusOfPlayerName(nameOP)) {
             playerData.put(nameOP, id);
             System.out.println("Name [" + nameOP + "] added to data.");
             writeMsgToClient("Your name added to data.", id);
@@ -181,10 +176,9 @@ public class Warships {
         else {
 //            System.out.println("playerData.get(nameOfPlayer)= " + playerData.get(nameOP));
 //            System.out.println("pID = " + id);
-            if(playerData.get(nameOP)==id) {
+            if (playerData.get(nameOP) == id) {
                 auth = true;
-            }
-            else {
+            } else {
                 writeMsgToClient("Name [" + nameOP + "] is already exist. Enter another name.", id);
                 System.out.println("Name [" + nameOP + "] is already exist.");
             }
@@ -193,9 +187,9 @@ public class Warships {
 
     }
 
-    private void deleteClientFromList(int id){
-        for(ClientHandler client : clients){
-            if(client.pID==id){
+    private void deleteClientFromList(int id) {
+        for (ClientHandler client : clients) {
+            if (client.pID == id) {
                 clients.remove(client);
             }
         }
@@ -208,7 +202,6 @@ public class Warships {
         Socket sock;
         ObjectOutputStream oos;
         String nameOfPlayer;
-        int stepOfGame = 0;
 
         ClientHandler(Socket clientSocket, int id) {
             pID = id;
@@ -236,7 +229,8 @@ public class Warships {
                     Commands command;
                     Coord coord = null;
                     String msgFromClient;
-
+                    int clientStepOfGame = 0;
+//на 2 команды
                     if (!(msgFromClient = reader.readLine()).isEmpty()) {
 //         ===========================Parse_start=============================
                         System.out.println(".....Server got message......");
@@ -246,17 +240,17 @@ public class Warships {
                         if (getMsg.length == 2) {
                             nameOfPlayer = getMsg[0];
                             command = detectCommand(getMsg[1]);
-                        } else if (getMsg.length == 3) {
-                            nameOfPlayer = getMsg[0];
-                            command = detectCommand(getMsg[1]);
+                        }
                             /*
                             *если в getMsg[2] 1 симаол - это № хода игры. Если >1 - это координата.
                              */
-                            if(getMsg[2].length()==1){
-                                stepOfGame = Integer.parseInt(getMsg[2]);
-                                System.out.println("Step of game = " + stepOfGame);
-                            }
-                            else {
+                        else if (getMsg.length == 3) {
+                            nameOfPlayer = getMsg[0];
+                            command = detectCommand(getMsg[1]);
+                            if (getMsg[2].length() == 1) {
+                                clientStepOfGame = Integer.parseInt(getMsg[2]);
+                                System.out.println("Step of game = " + clientStepOfGame);
+                            } else {
                                 coord = getCoodrinates(getMsg[2]);
                             }
                         } else {
@@ -271,90 +265,49 @@ public class Warships {
                         //Обработка сообщения от клиента
                         try {
                             //Проверка имени в базе
-                            if (authorize(nameOfPlayer, pID)) {
+                            authorize(nameOfPlayer, pID);
+//                            writeMsgToClient("Authorize passed", pID);
+                            System.out.println("Trying to get Game from data");
+                            Game currentGame = getGame(nameOfPlayer);
 
-//                                writeMsgToClient("Authorize passed", pID);
-                                switch (command) {
-                                    case STARTSOLO:
-                                        Game soloGame = new Game(nameOfPlayer, getGameID());
-                                        System.out.println("New game was created");
+                            switch (command) {
+                                case STARTSOLO:
+                                    Game soloGame = new Game(nameOfPlayer, getGameID());
+                                    System.out.println("New game was created");
 //                                        ArrayList<String> playerList = new ArrayList<>();
 //                                        playerList.add(nameOfPlayer);
 //                                        gameData.put(currentGame, playerList);
-                                        gameList.put(getGameID(), soloGame);
-                                        incrementGameID();
-                                        writeMsgToClient("New game was created", pID);
-//                                        writeMsgToClient("GameFile", pID);
-//                                        oos.writeObject(currentGame);
-                                        break;
-                                    case START:
-                                        QueueOfPlayersHandler.queueOfPlayers.offer(nameOfPlayer);
-                                        writeMsgToClient("Waiting for an opponent", pID);
-                                        break;
-                                }
+                                    gameList.put(getGameID(), soloGame);
+                                    incrementGameID();
+                                    writeMsgToClient("New game was created", pID);
+                                    break;
+                                case START:
+                                    QueueOfPlayersHandler.queueOfPlayers.offer(nameOfPlayer);
+                                    writeMsgToClient("Waiting for an opponent", pID);
+                                    break;
+                                case CHECK:
 
-                                //Существует ли игра c таким игроком
-                                if (checkGameStatus(nameOfPlayer)) {
-                                    System.out.println("Trying to get Game from data");
-                                    Game currentGame = getGame(nameOfPlayer);
-//                                    writeMsgToClient("Your game is available", pID);
-                                    //Не закончилась ли игра
-                                    if (!currentGame.isEndOfGame()) {
-
-                                        if (command == Commands.CHECK) {
-                                            System.out.println("Command: Check. getGame(nameOfPlayer).getStep()= " + getGame(nameOfPlayer).getStep());
-                                            if (stepOfGame != getGame(nameOfPlayer).getStep() || stepOfGame == 0) {
-//                                                writeMsgToClient("GameFile", pID);
-                                                oos.writeObject("GameFile");
-                                                oos.writeObject(currentGame);
-                                                oos.flush();
-
-                                            }
-                                        } else {
-                                            writeMsgToClient("Your game status is actual", pID);
-                                        }
-
-                                        //Чья очередь ходить
-                                        if (getGame(nameOfPlayer).turnToMove(nameOfPlayer)) {
-                                            writeMsgToClient("MOVE!!!", pID);
-//                                            currentGame.makeMove(nameOfPlayer, command, coord);
-//                                            currentGame.checkWinStatus();
-                                            //Реакция на команду игрока
-                                            switch (command) {
-                                                case SHOOT:
-                                                    currentGame.makeShoot(nameOfPlayer, coord);
-//                                                    currentGame.incrementStep();
-                                                    gameList.put(currentGame.getGID(), currentGame);
-                                                    System.out.println("GAME REWRITTEN TO DATA");
-
-                                                    break;
-                                                case PUT:
-//                                                    currentGame.putShip(nameOfPlayer, coord);
-                                                     break;
-                                            }
-//                                            writeMsgToClient("Govorit server: " + msgFromClient, pID);
-
-
-                                        } else {
-                                            writeMsgToClient("It's not your turn to move", pID);
-                                        }
-                                    } else writeMsgToClient("Game is over", pID);
-                                } else {
-                                    /*
-                                    //Если игры не существует с даными игроками:
-                                     */
-                                    writeMsgToClient("You can start a new game by entering 'Start'", pID);
-                                }
-                                /*
-                                  Выполнение команды игрока вне зависимости от результата метода checkGameStatus()
-                                 */
-
+                                    System.out.println("Command: Check. getGame(nameOfPlayer).getStep()= " + getGame(nameOfPlayer).getStep());
+                                    if (clientStepOfGame != getGame(nameOfPlayer).getStep() || clientStepOfGame == 0) {
+                                        sendGameToClient();
+                                    }
+                                    break;
+                                default:
+                                    if (currentGame.turnToMove().equals(nameOfPlayer)) {
+                                        currentGame.makeMove(nameOfPlayer, command, coord);
+                                        gameList.put(currentGame.getGID(), currentGame);
+                                        System.out.println("GAME REWRITTEN TO DATA");
+                                    } else {
+                                        writeMsgToClient("It's not your turn to move", pID);
+                                    }
                             }
+
+
                             //Если авторизоваться не получилось:
-                            else {
-                                writeMsgToClient("Enter new name", pID);
-                            }
-                            oos.flush();
+                        } catch (NullPointerException ex) {
+                            ex.printStackTrace();
+                            System.out.println("No Game Class get yet.");
+
                         } catch (Exception e) {
                             e.printStackTrace();
                             System.out.println("Error 1");
@@ -363,14 +316,58 @@ public class Warships {
                 }
             } catch (Exception e) {
                 System.out.println("beda-beda");
+                closeClientConnections();
+                e.printStackTrace();
+
+            }
+        }
+
+        /*
+        Отправление игры клиенту
+         */
+
+        private synchronized void sendGameToClient() throws IOException {
+            System.out.println("----> Sending game to client");
+            oos.writeObject("GameFile");
+            oos.flush();
+            Game game = getGame(nameOfPlayer);
+            String gameString = toString(game);
+            oos.writeObject(gameString);
+            oos.flush();
+            writeMsgToClient("Turn to move of player: " + game.turnToMove(), pID);
+        }
+
+        /*
+        Сериализация экземпляра класса Game в String
+         */
+        private String toString(Serializable o) throws IOException {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(baos);
+            objectOutputStream.writeObject(o);
+            objectOutputStream.close();
+            return Base64.getEncoder().encodeToString(baos.toByteArray());
+
+        }
+
+        void closeClientConnections() {
+            try {
+                reader.close();
+                oos.close();
+                sock.close();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
+
+    /*
+    При команде START игрок попадает в очередь. При количестве людей в очереди = 2 создается игра.
+     */
     private static class QueueOfPlayersHandler implements Runnable {
 
         //Очередь из игроков:
         private static Queue<String> queueOfPlayers = new LinkedList<>();
+
         @Override
         public void run() {
             while (true) {
