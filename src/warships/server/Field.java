@@ -1,37 +1,71 @@
 package warships.server;
 
-import java.io.Serializable;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
 import java.util.ArrayList;
+import java.util.Random;
+import java.util.stream.IntStream;
 
-public class Field implements Serializable{
+@JsonAutoDetect
+public class Field {
 
+    @JsonProperty("field_id")
+    private int fieldID;
+
+    @JsonProperty("field_width")
     private int width = 10;
+    @JsonProperty("field_height")
     private int height = 10;
-    private int power;
-    private String fieldOwner;
+    @JsonProperty("Power")
+    private int power = 0;
+    @JsonProperty("fieldOwnerName")
+    private String fieldOwnerName;
+
+    @JsonProperty("fieldOwnerID")
+    private int fieldOwnerID;
+
+
+    @JsonProperty("listOfShips")
+    @JsonDeserialize(as = ArrayList.class)
     public ArrayList<Coord> listOfShips = new ArrayList<>();
 
+    @JsonProperty("matrix")
     private int[][] matrix;
 
-    /*
-    //Для создания игрового поля используется имя игрока
-     */
-    protected Field(String name) {
-        fieldOwner = name;
+    public Field() {
+    }
 
+    /*
+        //Для создания игрового поля используется имя игрока
+         */
+    public Field(String playerName, int playerID, int fieldID) {
+
+        setFieldID(fieldID);
+        setFieldOwnerName(playerName);
+        setFieldOwnerID(playerID);
+
+        int width = getWidth();
+        int height = getHeight();
         matrix = new int[width][height];
 
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
                 matrix[i][j] = 0;
             }
         }
 
-        putShip(new Coord(1 , 1));
-        putShip(new Coord(4 , 4));
+        fillFieldWithShips();
+//        putShip(new Coord(1, 1));
+//        putShip(new Coord(4, 4));
+//        putShip(new Coord(0, 0));
+//        putShip(new Coord(0, 5));
 
-        shoot(new Coord(1,1));
-        shoot(new Coord(3,3));
+//        shoot(new Coord(0, 0));
+//        shoot(new Coord(1, 1));
+//        shoot(new Coord(2, 2));
+//        shoot(new Coord(3, 3));
 
 
     }
@@ -40,36 +74,90 @@ public class Field implements Serializable{
         return power;
     }
 
-    public void setPower() {
-        this.power = listOfShips.size();
+    public void setPower(int pow) {
+        power = pow;
     }
 
-    private Integer getValue(Coord coord) {
-        if (coord.x >= 0 && coord.x < width && coord.y >= 0 && coord.y < height)
-            return matrix[coord.x][coord.y];
-        return null;
+    public int getFieldID() {
+        return fieldID;
     }
 
-    private void setValue(Coord coord, int value) {
-        if (coord.x >= 0 && coord.x < width && coord.y >= 0 && coord.y < height)
-            matrix[coord.y][coord.x] = value;
+    public void setFieldID(int id) {
+        fieldID = id;
     }
 
-    public String getFieldOwner() {
-        return fieldOwner;
+    public void setWidth(int width) {
+        this.width = width;
     }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+
+    private int getCoordValue(Coord coord) {
+        int i = 0;
+        if (coord.getX() >= 0 && coord.getX() < getWidth() && coord.getY() >= 0 && coord.getY() < getHeight())
+            return matrix[coord.getX()][coord.getY()];
+        return i;
+    }
+
+    private void setCoordValue(Coord coord, int value) {
+        if (coord.getX() >= 0 && coord.getX() < getWidth() && coord.getY() >= 0 && coord.getY() < getHeight())
+            matrix[coord.getX()][coord.getY()] = value;
+    }
+
+    public String getFieldOwnerName() {
+        return fieldOwnerName;
+    }
+
+    public void setFieldOwnerName(String name) {
+        fieldOwnerName = name;
+    }
+
+    public void setListOfShips(ArrayList<Coord> listOfShips) {
+        this.listOfShips = listOfShips;
+    }
+
+    public void setMatrix(int[][] matrix) {
+        this.matrix = matrix;
+    }
+
+    public int[][] getMatrix() {
+        return matrix;
+    }
+
+    public int getFieldOwnerID() {
+        return fieldOwnerID;
+    }
+
+    public void setFieldOwnerID(int fieldOwnerID) {
+        this.fieldOwnerID = fieldOwnerID;
+    }
+
 
     public void print(String name) {
 
-        int[][] rezerv = new int[height][width];
+        int[][] rezerv = new int[getHeight()][getWidth()];
 
-        for (int i = 0; i < height; i++)
-            for (int j = 0; j < width; j++) {
-                rezerv[i][j] = matrix[i][j];
+        for (int i = 0; i < getWidth(); i++) {
+            for (int j = 0; j < getHeight(); j++) {
+                rezerv[i][j] = getMatrix()[i][j];
             }
-        if(name.equals(fieldOwner)){
-            for(Coord coord : listOfShips){
-                rezerv[coord.y][coord.x] = 1;
+        }
+
+        if (name.equals(getFieldOwnerName())) {
+            for (Coord coord : listOfShips) {
+                if (rezerv[coord.getX()][coord.getY()] != 5)
+                    rezerv[coord.getX()][coord.getY()] = 1;
             }
         }
         /*
@@ -80,16 +168,14 @@ public class Field implements Serializable{
         // "5" - открытая клетка с раненым кораблем
          */
 
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
+        for (int i = 0; i < getHeight(); i++) {
+            for (int j = 0; j < getWidth(); j++) {
                 int index = rezerv[i][j];
                 // 0 - пустя клетка
                 if (index == 0)
                     System.out.print(" 0 ");
-                // 1 - попадание в корабль
                 else if (index == 5)
                     System.out.print(" X ");
-                // -1 - промах
                 else if (index == -1)
                     System.out.print(" - ");
                 else if (index == 1)
@@ -101,26 +187,44 @@ public class Field implements Serializable{
         }
     }
 
-    void putShip(Coord coord){
-        int value = getValue(coord);
-        if (value == 0 ) {
-            listOfShips.add(coord);
-            power++;
-        }
-        else
-            System.out.println("try another one cell");
+    private Coord getNewCoord() {
+        Random random = new Random();
+        return new Coord(random.nextInt(9), random.nextInt(9));
     }
 
-    void shoot(Coord coord){
+    private void putShip(Coord coord) {
+        listOfShips.add(coord);
+        setPower(getPower() + 1);
+    }
 
-        int value = getValue(coord);
-        if (listOfShips.removeIf(coord1 -> coord1.equals(coord))){
-            setValue(coord, 5);
-            power--;
+    private void fillFieldWithShips() {
+
+        while (getPower() < 10) {
+
+            Coord newCoord = getNewCoord();
+
+            if (!listOfShips.contains(newCoord)) {
+
+                for (Coord cd : listOfShips) {
+                    if (cd.equals(newCoord))
+                        break;
+                }
+                putShip(newCoord);
+            }
         }
-        else {
+    }
+
+    synchronized void shoot(Coord coord) {
+
+        int value = getCoordValue(coord);
+
+        if (listOfShips.contains(coord)) {
+            setCoordValue(coord, 5);
+            setPower(getPower() - 1);
+        } else {
             if (value == 0)
-                setValue(coord, -1);
+                setCoordValue(coord, -1);
         }
     }
+
 }

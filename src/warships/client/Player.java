@@ -1,12 +1,15 @@
 package warships.client;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import warships.server.Field;
 import warships.server.Game;
 
 import java.io.*;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
 import java.util.Base64;
+import java.util.Date;
 
 public class Player {
 
@@ -18,6 +21,8 @@ public class Player {
     private Socket sock;
 
     private int currentStep = 0;
+
+    private boolean check;
 
     public static void main(String[] args) {
         new Player().go();
@@ -35,18 +40,18 @@ public class Player {
 
     private void connect(){
         try {
-            System.out.println("Attempt to connect...");
+            printMessage("Attempt to connect...");
             sock = new Socket("127.0.0.1", 4949);
             //sock = new Socket("176.105.12.145", 4444);
         } catch (Exception ex) {
-            System.out.println("Socket connection exception");
+            printMessage("Socket connection exception");
         }
     }
 
     private void keyboardListener() {
         try {
             keyboard = new BufferedReader(new InputStreamReader(System.in));
-            System.out.println("Connection with keyboard created.");
+            printMessage("Connection with keyboard created.");
         } catch (Exception ex) {
             ex.printStackTrace();
             closeConnection();
@@ -55,7 +60,6 @@ public class Player {
 
     private class PlayerListener implements Runnable {
 
-//        Game currentGame= null;
         @Override
         public void run() {
             try {
@@ -64,6 +68,7 @@ public class Player {
                 e.printStackTrace();
             }
 
+            //noinspection InfiniteLoopStatement
             while (true) {
                 String receivedMessage;
                 try {
@@ -73,36 +78,50 @@ public class Player {
                     //и обрабатываем его
                      */
                     if (receivedMessage.equalsIgnoreCase("GameFile")){
-//                        Game currentGame = (Game) ois.readObject();
-                        String gama = (String) ois.readObject();
-                        Game currentGame = (Game) fromString(gama);
+//                        String gama = (String) ois.readObject();
+//                        Game currentGame = (Game) fromString(gama);
+
+                        StringReader reader = new StringReader((String) ois.readObject());
+                        ObjectMapper mapper = new ObjectMapper();
+
+//                        System.out.println("Получение игры");
+                        Game currentGame = mapper.readValue(reader, Game.class);
+//                        System.out.println("Класс игры получен");
+
+                        if (currentGame != null) {
 //                        System.out.println("Actual step= " + getCurrentStep());
-                        setCurrentStep(currentGame.getStep());
+                            setCurrentStep(currentGame.getStep());
 //                        System.out.println("New step= " + getCurrentStep());
                         /*
                         Если имя игрока в игре занесено как первый игрок.
                          */
-                        Field playerField;
-                        Field enemyField;
-                        if(getNameOfPlayer().equals(currentGame.playersInGame[0])) {
-                            playerField = currentGame.firstField;
-                            enemyField = currentGame.secondField;
-                        }
+                            Field playerField;
+                            Field enemyField;
+                            if (getNameOfPlayer().equals(currentGame.playersInGame[0])) {
+                                playerField = currentGame.getFirstField();
+                                enemyField = currentGame.getSecondField();
+                            }
                         /*
                         Если имя игрока в игре занесено как второй игрок
                          */
-                        else {
-                            playerField = currentGame.secondField;
-                            enemyField = currentGame.firstField;
+                            else {
+                                playerField = currentGame.getSecondField();
+                                enemyField = currentGame.getFirstField();
+                            }
+                            if (playerField != null && enemyField != null) {
+                                printMessage("Player field:");
+                                playerField.print(getNameOfPlayer());
+                                printMessage("Enemy field:");
+                                enemyField.print("");
+                                printMessage("Step of game: " + currentGame.getStep() + ".");
+                                printMessage(currentGame.showScore());
+                            }
                         }
-                        System.out.println("Player field:");
-                        playerField.print(nameOfPlayer);
-                        System.out.println("Enemy field:");
-                        enemyField.print("");
-                        System.out.println(currentGame.getScore());
                     }
+                    else if (receivedMessage.equals("CHECKDONE"))
+                        setCheck(false);
                     else{
-                        System.out.println("Received message: " + receivedMessage);
+                        printMessage("Received message: " + receivedMessage);
                     }
 
                 } catch (IOException | ClassNotFoundException e) {
@@ -113,15 +132,12 @@ public class Player {
 
         }
 
-        private Object fromString(String gama) throws IOException, ClassNotFoundException {
-            byte [] gameBytes = Base64.getDecoder().decode(gama);
-            ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(gameBytes));
-            Object obj = objectInputStream.readObject();
-            objectInputStream.close();
-            return  obj;
-        }
-//        private Game getCurrentGame() {
-//            return currentGame;
+//        private Object fromString(String gama) throws IOException, ClassNotFoundException {
+//            byte [] gameBytes = Base64.getDecoder().decode(gama);
+//            ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(gameBytes));
+//            Object obj = objectInputStream.readObject();
+//            objectInputStream.close();
+//            return  obj;
 //        }
     }
 
@@ -129,9 +145,9 @@ public class Player {
         @Override
         public void run() {
             try {
-                System.out.println("Writer loading...");
+                printMessage("Writer loading.");
                 writer = new PrintWriter(new OutputStreamWriter(sock.getOutputStream()));
-                System.out.println("Writer created");
+                printMessage("Writer created.");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -162,7 +178,7 @@ public class Player {
                                 //Если игрок не присваивает себе имя - идёт проверка на наличие имени
                                  */
                         } else if (getNameOfPlayer() == null) {
-                            System.out.println("Enter your name first by [name = <your name>]");
+                            printMessage("Enter your name first by [name = <your name>]");
                         } else {
 //                            System.out.println("name of player = " + getNameOfPlayer());
                             String msgToServer = getNameOfPlayer() + ":" + msgEdited;
@@ -174,7 +190,7 @@ public class Player {
 
                 } catch (Exception e) {
                     e.printStackTrace();
-                    System.out.println("Ошибка ввода");
+                    printMessage("Ошибка ввода");
                     closeConnection();
                 }
             }
@@ -189,23 +205,23 @@ public class Player {
     public class Pinger implements Runnable{
         @Override
         public void run() {
-            int seconds = 8;
-            System.out.println("Pinger creating");
+            int seconds = 5;
             try {
                 Thread.sleep(seconds*1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            //noinspection InfiniteLoopStatement
             while (true){
                 String checkMessage;
                 try {
-                    if (getNameOfPlayer()!=null) {
+                    if (getNameOfPlayer()!=null && !isCheck()) {
 //                        System.out.println("i want to send 'check'");
                         checkMessage = (getNameOfPlayer() + ":Check:" + getCurrentStep());
 //                        System.out.println((getNameOfPlayer() + ":Check:" + getCurrentStep()));
-//                        System.out.println("CCCCCCCCheck msg: " + checkMessage);
                         writer.println(checkMessage);
                         writer.flush();
+                        setCheck(true);
                     }
                     Thread.sleep(seconds * 1000);
                 } catch (InterruptedException e) {
@@ -219,12 +235,6 @@ public class Player {
     private String getNameOfPlayer() {
         return nameOfPlayer;
     }
-
-
-
-//    public void setCurrentGame(Game currentGame) {
-//        this.currentGame = currentGame;
-//    }
 
     private synchronized int getCurrentStep() {
         return currentStep;
@@ -255,6 +265,20 @@ public class Player {
         }
     }
 
+    private boolean isCheck() {
+        return check;
+    }
 
+    private void setCheck(boolean check) {
+        this.check = check;
+    }
+
+    private void printMessage(String msg){
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+        Date date = new Date();
+        String time = sdf.format(date);
+        System.out.println(time + ": " + msg);
+
+    }
 
 }
